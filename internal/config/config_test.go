@@ -1,4 +1,4 @@
-package config
+package config_test
 
 import (
 	"os"
@@ -7,25 +7,26 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/sushichan044/himo/internal/config"
+	"github.com/sushichan044/himo/internal/git"
 )
 
-func TestFindUpConfig(t *testing.T) {
+func TestResolveConfigFilePathFrom(t *testing.T) {
 	t.Run("finds himo.yml in ancestor directory within git repo", func(t *testing.T) {
 		repoRoot := t.TempDir()
 		mustMkdirAll(t, filepath.Join(repoRoot, ".git"))
 
-		configPath := filepath.Join(repoRoot, "nested", defaultConfigFileName)
+		configPath := filepath.Join(repoRoot, "nested", "himo.yml")
 		mustMkdirAll(t, filepath.Dir(configPath))
 		mustWriteFile(t, configPath, []byte("post_edit:\n  hooks: []\n"))
 
 		startDir := filepath.Join(repoRoot, "nested", "deeper")
 		mustMkdirAll(t, startDir)
 
-		got, err := FindUpAndLoad(startDir)
+		got, err := config.ResolveConfigFilePathFrom(startDir)
 		require.NoError(t, err)
-
-		assert.Equal(t, configPath, got.Path)
-		assert.Equal(t, filepath.Dir(configPath), got.CWD)
+		assert.Equal(t, configPath, got)
 	})
 
 	t.Run("returns not found when config does not exist within git repo", func(t *testing.T) {
@@ -35,45 +36,50 @@ func TestFindUpConfig(t *testing.T) {
 
 		mustMkdirAll(t, filepath.Join(repoRoot, ".git"))
 		mustMkdirAll(t, startDir)
-		mustWriteFile(t, filepath.Join(parent, defaultConfigFileName), []byte("post_edit:\n  hooks: []\n"))
+		mustWriteFile(t, filepath.Join(parent, "himo.yml"), []byte("post_edit:\n  hooks: []\n"))
 
-		_, err := FindUpAndLoad(startDir)
-		assert.Error(t, err)
+		got, err := config.ResolveConfigFilePathFrom(startDir)
+		require.NoError(t, err)
+		assert.Empty(t, got)
 	})
 
 	t.Run("starts from parent when given a file path", func(t *testing.T) {
 		repoRoot := t.TempDir()
 		mustMkdirAll(t, filepath.Join(repoRoot, ".git"))
 
-		configPath := filepath.Join(repoRoot, defaultConfigFileName)
+		configPath := filepath.Join(repoRoot, "himo.yml")
 		mustWriteFile(t, configPath, []byte("post_edit:\n  hooks: []\n"))
 
 		sourceFilePath := filepath.Join(repoRoot, "nested", "file.go")
 		mustMkdirAll(t, filepath.Dir(sourceFilePath))
 		mustWriteFile(t, sourceFilePath, []byte("package nested\n"))
 
-		got, err := FindUpAndLoad(sourceFilePath)
+		got, err := config.ResolveConfigFilePathFrom(sourceFilePath)
 		require.NoError(t, err)
-		assert.Equal(t, configPath, got.Path)
+		assert.Equal(t, configPath, got)
 	})
 
 	t.Run("returns not found when outside git repo", func(t *testing.T) {
 		startDir := t.TempDir()
-		mustWriteFile(t, filepath.Join(startDir, defaultConfigFileName), []byte("post_edit:\n  hooks: []\n"))
+		mustWriteFile(t, filepath.Join(startDir, "himo.yml"), []byte("post_edit:\n  hooks: []\n"))
 
-		_, err := FindUpAndLoad(startDir)
-		assert.Error(t, err)
+		_, err := config.ResolveConfigFilePathFrom(startDir)
+		assert.ErrorIs(t, err, git.ErrNotInGitRepo)
 	})
 }
 
-func TestLoadConfig(t *testing.T) {
+func TestLoad(t *testing.T) {
 	t.Run("uses explicit config path and sets cwd from it", func(t *testing.T) {
 		configDir := filepath.Join(t.TempDir(), "config")
-		configPath := filepath.Join(configDir, defaultConfigFileName)
+		configPath := filepath.Join(configDir, "himo.yml")
 		mustMkdirAll(t, configDir)
-		mustWriteFile(t, configPath, []byte("post_edit:\n  hooks:\n    - glob: \"**/*.go\"\n      command: go fmt ./...\n"))
+		mustWriteFile(
+			t,
+			configPath,
+			[]byte("post_edit:\n  hooks:\n    - glob: \"**/*.go\"\n      command: go fmt ./...\n"),
+		)
 
-		got, err := Load(configPath)
+		got, err := config.Load(configPath)
 		require.NoError(t, err)
 
 		assert.Equal(t, configPath, got.Path)

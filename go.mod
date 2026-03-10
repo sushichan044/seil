@@ -1,6 +1,6 @@
 module github.com/sushichan044/himo
 
-go 1.26.1
+go 1.26.0
 
 require (
 	github.com/alecthomas/kong v1.14.0

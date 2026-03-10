@@ -25,22 +25,22 @@ type (
 // AfterApply is called after kong has parsed the command-line arguments and before executing the command.
 // We use this to load the configuration file and set into binding struct.
 func (cli *CLI) AfterApply(r *resolvedConfig) error {
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
+	cfgPath := string(cli.Config)
+
+	if cfgPath == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		cfgPath, err = config.ResolveConfigFilePathFrom(wd)
+		if err != nil {
+			return fmt.Errorf("failed to resolve config file path: %w", err)
+		}
 	}
 
-	var cfg *resolvedConfig
-	if cli.Config == "" {
-		cfg, err = config.FindUpAndLoad(wd)
-		if err != nil {
-			return fmt.Errorf("failed to find config: %w", err)
-		}
-	} else {
-		cfg, err = config.Load(string(cli.Config))
-		if err != nil {
-			return fmt.Errorf("failed to load config: %w", err)
-		}
+	cfg, err := config.Load(cfgPath)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	*r = *cfg
@@ -52,10 +52,15 @@ type CheckFileCmd struct {
 }
 
 func (c *CheckFileCmd) Run(cli *CLI, cfg *resolvedConfig) error {
-	fmt.Printf("File '%s' exists.\n", c.FilePath)
-	fmt.Printf("Loaded config: %+v\n", cfg.Config)
-	fmt.Printf("Config cwd: %s\n", cfg.CWD)
-	return nil
+	_ = cli
+	if _, err := fmt.Fprintf(os.Stdout, "File '%s' exists.\n", c.FilePath); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(os.Stdout, "Loaded config: %+v\n", cfg.Config); err != nil {
+		return err
+	}
+	_, err := fmt.Fprintf(os.Stdout, "Config cwd: %s\n", cfg.CWD)
+	return err
 }
 
 func main() {
