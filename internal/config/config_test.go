@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,15 +22,10 @@ func TestFindUpConfig(t *testing.T) {
 		mustMkdirAll(t, startDir)
 
 		got, err := FindUpAndLoad(startDir)
-		if err != nil {
-			t.Fatalf("FindUpConfig() error = %v", err)
-		}
-		if got.Path != configPath {
-			t.Fatalf("FindUpConfig().Path = %q, want %q", got.Path, configPath)
-		}
-		if got.CWD != filepath.Dir(configPath) {
-			t.Fatalf("FindUpConfig().CWD = %q, want %q", got.CWD, filepath.Dir(configPath))
-		}
+		require.NoError(t, err)
+
+		assert.Equal(t, configPath, got.Path)
+		assert.Equal(t, filepath.Dir(configPath), got.CWD)
 	})
 
 	t.Run("returns not found when config does not exist within git repo", func(t *testing.T) {
@@ -42,7 +38,7 @@ func TestFindUpConfig(t *testing.T) {
 		mustWriteFile(t, filepath.Join(parent, defaultConfigFileName), []byte("post_edit:\n  hooks: []\n"))
 
 		_, err := FindUpAndLoad(startDir)
-		require.Error(t, err)
+		assert.Error(t, err)
 	})
 
 	t.Run("starts from parent when given a file path", func(t *testing.T) {
@@ -57,12 +53,8 @@ func TestFindUpConfig(t *testing.T) {
 		mustWriteFile(t, sourceFilePath, []byte("package nested\n"))
 
 		got, err := FindUpAndLoad(sourceFilePath)
-		if err != nil {
-			t.Fatalf("FindUpConfig() error = %v", err)
-		}
-		if got.Path != configPath {
-			t.Fatalf("FindUpConfig().Path = %q, want %q", got.Path, configPath)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, configPath, got.Path)
 	})
 
 	t.Run("returns not found when outside git repo", func(t *testing.T) {
@@ -70,7 +62,7 @@ func TestFindUpConfig(t *testing.T) {
 		mustWriteFile(t, filepath.Join(startDir, defaultConfigFileName), []byte("post_edit:\n  hooks: []\n"))
 
 		_, err := FindUpAndLoad(startDir)
-		require.Error(t, err)
+		assert.Error(t, err)
 	})
 }
 
@@ -82,31 +74,20 @@ func TestLoadConfig(t *testing.T) {
 		mustWriteFile(t, configPath, []byte("post_edit:\n  hooks:\n    - glob: \"**/*.go\"\n      command: go fmt ./...\n"))
 
 		got, err := Load(configPath)
-		if err != nil {
-			t.Fatalf("LoadConfig() error = %v", err)
-		}
-		if got.Path != configPath {
-			t.Fatalf("LoadConfig().Path = %q, want %q", got.Path, configPath)
-		}
-		if got.CWD != configDir {
-			t.Fatalf("LoadConfig().CWD = %q, want %q", got.CWD, configDir)
-		}
-		if len(got.Config.PostEdit.Hooks) != 1 {
-			t.Fatalf("LoadConfig().Config.PostEdit.Hooks length = %d, want 1", len(got.Config.PostEdit.Hooks))
-		}
+		require.NoError(t, err)
+
+		assert.Equal(t, configPath, got.Path)
+		assert.Equal(t, configDir, got.CWD)
+		assert.Len(t, got.Config.PostEdit.Hooks, 1)
 	})
 }
 
 func mustMkdirAll(t *testing.T, path string) {
 	t.Helper()
-	if err := os.MkdirAll(path, 0o755); err != nil {
-		t.Fatalf("os.MkdirAll(%q) error = %v", path, err)
-	}
+	require.NoError(t, os.MkdirAll(path, 0o700))
 }
 
 func mustWriteFile(t *testing.T, path string, data []byte) {
 	t.Helper()
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("os.WriteFile(%q) error = %v", path, err)
-	}
+	require.NoError(t, os.WriteFile(path, data, 0o600))
 }
