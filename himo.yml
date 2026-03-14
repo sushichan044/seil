@@ -3,6 +3,3 @@ post_edit:
     fmt:
       glob: "**/*.go"
       command: mise run fmt
-    lint:
-      glob: "**/*.go"
-      command: mise run lint
