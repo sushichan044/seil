@@ -2,4 +2,7 @@ post_edit:
   hooks:
     fmt:
       glob: "**/*.go"
-      command: gofmt -w {{.Files | join " "}}
+      command: mise run fmt
+    lint:
+      glob: "**/*.go"
+      command: mise run lint
