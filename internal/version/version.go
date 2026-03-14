@@ -12,8 +12,8 @@ const (
 	gitShortHashLength = 7
 )
 
-// Get returns the version information of the memo-cli application.
-// It reads version from runtime/debug.ReadBuildInfo() which is automatically
+// Get returns the version information of the application.
+// It reads version from [runtime/debug.ReadBuildInfo]() which is automatically
 // populated when built with Go modules and version tags.
 //
 // The version format is:

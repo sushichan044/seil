@@ -3,15 +3,17 @@ description = "Run the application in development mode"
 run = "go run ./cmd/himo"
 
 [tasks."lint"]
-run = [{ tasks = ["lint:golangci", "lint:deadcode"] }]
+run = [{ tasks = ["lint:golangci", "lint:deadcode", "lint:gofix"] }]
 
 [tasks."lint:golangci"]
 description = "Run golangci-lint"
 run = "golangci-lint run"
+hide = true
 
 [tasks."lint:golangci:fix"]
 description = "Run golangci-lint with --fix"
 run = "golangci-lint run --fix"
+hide = true
 
 [tasks."lint:deadcode"]
 description = "Run deadcode"
@@ -22,9 +24,14 @@ if [ -n "$out" ]; then
   exit 1
 fi
 """
+hide = true
+
+[tasks."lint:gofix"]
+run = "go fix ./..."
+hide = true
 
 [tasks."lint:fix"]
-run = [{ tasks = ["lint:golangci:fix", "lint:deadcode"] }]
+run = [{ tasks = ["lint:golangci:fix", "lint:deadcode", "lint:gofix"] }]
 
 [tasks.fmt]
 description = "Format code"
