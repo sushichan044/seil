@@ -22,10 +22,10 @@ type (
 	}
 
 	PostEdit struct {
-		Hooks []EditHook `yaml:"hooks"`
+		Hooks map[string]Hook `yaml:"hooks"`
 	}
 
-	EditHook struct {
+	Hook struct {
 		Glob    string `yaml:"glob"`
 		Command string `yaml:"command"`
 	}
@@ -44,7 +44,7 @@ func Load(path string) (*ResolvedConfig, error) {
 		return nil, err
 	}
 
-	config, err := NewConfigFromBytes(data)
+	config, err := newConfigFromBytes(data)
 	if err != nil {
 		return nil, err
 	}
@@ -56,13 +56,17 @@ func Load(path string) (*ResolvedConfig, error) {
 	}, nil
 }
 
-func NewConfigFromBytes(data []byte) (*Config, error) {
-	var config Config
-	err := yaml.Unmarshal(data, &config)
-	if err != nil {
+func newConfigFromBytes(data []byte) (*Config, error) {
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
-	return &config, nil
+
+	if err := Validate(&cfg); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
 }
 
 func ResolveConfigFilePathFrom(path string) (string, error) {

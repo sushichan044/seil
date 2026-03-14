@@ -1,12 +1,17 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/alecthomas/kong"
 
+	"github.com/sushichan044/himo"
 	"github.com/sushichan044/himo/internal/config"
+	"github.com/sushichan044/himo/internal/postedit"
 	"github.com/sushichan044/himo/internal/version"
 )
 
@@ -14,7 +19,7 @@ type CLI struct {
 	Config  configFilePath   `short:"c" placeholder:"<path>" help:"Path to configuration file." type:"existingfile"`
 	Version kong.VersionFlag `short:"v"`
 
-	CheckFile CheckFileCmd `cmd:"" help:"Check if a file exists."`
+	PostEdit PostEditCmd `cmd:"" help:"Run post-edit hooks for a file."`
 }
 
 type (
@@ -47,19 +52,69 @@ func (cli *CLI) AfterApply(r *resolvedConfig) error {
 	return nil
 }
 
-type CheckFileCmd struct {
-	FilePath string `arg:"" name:"file" help:"Path to the file to check." type:"existingfile"`
+type PostEditCmd struct {
+	FilePath string `arg:"" name:"file" help:"Path to the edited file."       type:"existingfile"`
+	JSON     bool   `       name:"json" help:"Output results in JSON format."`
 }
 
-func (c *CheckFileCmd) Run(cli *CLI, cfg *resolvedConfig) error {
-	_ = cli
-	if _, err := fmt.Fprintf(os.Stdout, "File '%s' exists.\n", c.FilePath); err != nil {
+func (c *PostEditCmd) Run(cfg *resolvedConfig) error {
+	ws, err := himo.NewWorkspace(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create workspace: %w", err)
+	}
+
+	results, err := ws.RunPostEditHooks(context.Background(), c.FilePath)
+	if err != nil {
+		return fmt.Errorf("failed to run post-edit hooks: %w", err)
+	}
+
+	if c.JSON {
+		return printJSON(results)
+	}
+	return printText(results)
+}
+
+func printJSON(results []postedit.HookResult) error {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	return enc.Encode(results)
+}
+
+func printText(results []postedit.HookResult) error {
+	if _, err := fmt.Fprintln(os.Stdout, "=== post-edit hooks result ==="); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(os.Stdout, "Loaded config: %+v\n", cfg.Config); err != nil {
-		return err
+
+	succeeded, failed, skipped := 0, 0, 0
+	for _, r := range results {
+		if _, err := fmt.Fprintf(os.Stdout, "\nhook: %s\nstatus: %s\nexit_code: %d\nlog: %s\n",
+			r.Name, r.Status, r.ExitCode, r.LogPath); err != nil {
+			return err
+		}
+		if r.Summary != "" {
+			lines := strings.Split(r.Summary, "\n")
+			if _, err := fmt.Fprintln(os.Stdout, "summary:"); err != nil {
+				return err
+			}
+			for _, line := range lines {
+				if _, err := fmt.Fprintf(os.Stdout, "  %s\n", line); err != nil {
+					return err
+				}
+			}
+		}
+
+		switch r.Status {
+		case postedit.HookStatusSuccess:
+			succeeded++
+		case postedit.HookStatusFailure:
+			failed++
+		case postedit.HookStatusSkipped:
+			skipped++
+		}
 	}
-	_, err := fmt.Fprintf(os.Stdout, "Config cwd: %s\n", cfg.CWD)
+
+	_, err := fmt.Fprintf(os.Stdout, "\n---\n%d succeeded, %d failed, %d skipped\n",
+		succeeded, failed, skipped)
 	return err
 }
 

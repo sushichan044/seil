@@ -6,10 +6,12 @@ This file provides guidance to Coding Agents when working with code in this repo
 
 ## Quick Commands
 
+You must check `mise run fmt`, `mise run lint:fix`, and `mise run test` before ending your work.
+
 ```bash
 mise run test               # Run tests with coverage
 mise run lint               # Run golangci-lint for code quality checks
-mise run lint-fix           # Run golangci-lint and Auto-fix linting issues
+mise run lint:fix           # Run golangci-lint and Auto-fix linting issues
 mise run fmt                # Format code
 mise run build-snapshot     # Build cross-platform binaries with goreleaser
 mise run clean              # Remove generated files

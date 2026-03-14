@@ -5,7 +5,6 @@ package version
 import (
 	"fmt"
 	"runtime/debug"
-	"strings"
 )
 
 const (
@@ -62,30 +61,4 @@ func Get() string {
 	}
 
 	return version
-}
-
-// GetDetailed returns detailed version information including Go version and dependencies.
-// This can be useful for debugging and support purposes.
-func GetDetailed() map[string]string {
-	info, ok := debug.ReadBuildInfo()
-	if !ok {
-		return map[string]string{
-			"version": "unknown",
-		}
-	}
-
-	result := map[string]string{
-		"version":    Get(),
-		"go_version": info.GoVersion,
-		"path":       info.Path,
-	}
-
-	// Add all build settings
-	for _, setting := range info.Settings {
-		// Use dot notation for nested keys (e.g., vcs.revision)
-		key := strings.ReplaceAll(setting.Key, ".", "_")
-		result[key] = setting.Value
-	}
-
-	return result
 }

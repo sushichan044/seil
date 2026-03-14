@@ -19,7 +19,7 @@ func TestResolveConfigFilePathFrom(t *testing.T) {
 
 		configPath := filepath.Join(repoRoot, "nested", "himo.yml")
 		mustMkdirAll(t, filepath.Dir(configPath))
-		mustWriteFile(t, configPath, []byte("post_edit:\n  hooks: []\n"))
+		mustWriteFile(t, configPath, []byte("post_edit:\n  hooks: {}\n"))
 
 		startDir := filepath.Join(repoRoot, "nested", "deeper")
 		mustMkdirAll(t, startDir)
@@ -36,7 +36,7 @@ func TestResolveConfigFilePathFrom(t *testing.T) {
 
 		mustMkdirAll(t, filepath.Join(repoRoot, ".git"))
 		mustMkdirAll(t, startDir)
-		mustWriteFile(t, filepath.Join(parent, "himo.yml"), []byte("post_edit:\n  hooks: []\n"))
+		mustWriteFile(t, filepath.Join(parent, "himo.yml"), []byte("post_edit:\n  hooks: {}\n"))
 
 		got, err := config.ResolveConfigFilePathFrom(startDir)
 		require.NoError(t, err)
@@ -48,7 +48,7 @@ func TestResolveConfigFilePathFrom(t *testing.T) {
 		mustMkdirAll(t, filepath.Join(repoRoot, ".git"))
 
 		configPath := filepath.Join(repoRoot, "himo.yml")
-		mustWriteFile(t, configPath, []byte("post_edit:\n  hooks: []\n"))
+		mustWriteFile(t, configPath, []byte("post_edit:\n  hooks: {}\n"))
 
 		sourceFilePath := filepath.Join(repoRoot, "nested", "file.go")
 		mustMkdirAll(t, filepath.Dir(sourceFilePath))
@@ -61,7 +61,7 @@ func TestResolveConfigFilePathFrom(t *testing.T) {
 
 	t.Run("returns not found when outside git repo", func(t *testing.T) {
 		startDir := t.TempDir()
-		mustWriteFile(t, filepath.Join(startDir, "himo.yml"), []byte("post_edit:\n  hooks: []\n"))
+		mustWriteFile(t, filepath.Join(startDir, "himo.yml"), []byte("post_edit:\n  hooks: {}\n"))
 
 		_, err := config.ResolveConfigFilePathFrom(startDir)
 		assert.ErrorIs(t, err, git.ErrNotInGitRepo)
@@ -76,7 +76,7 @@ func TestLoad(t *testing.T) {
 		mustWriteFile(
 			t,
 			configPath,
-			[]byte("post_edit:\n  hooks:\n    - glob: \"**/*.go\"\n      command: go fmt ./...\n"),
+			[]byte("post_edit:\n  hooks:\n    fmt:\n      glob: \"**/*.go\"\n      command: \"go fmt ./...\"\n"),
 		)
 
 		got, err := config.Load(configPath)
@@ -85,6 +85,7 @@ func TestLoad(t *testing.T) {
 		assert.Equal(t, configPath, got.Path)
 		assert.Equal(t, configDir, got.CWD)
 		assert.Len(t, got.Config.PostEdit.Hooks, 1)
+		assert.Equal(t, "**/*.go", got.Config.PostEdit.Hooks["fmt"].Glob)
 	})
 }
 

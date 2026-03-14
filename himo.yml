@@ -1,4 +1,5 @@
 post_edit:
   hooks:
-    - glob: "**/*.go"
-      command: go fmt ./...
+    fmt:
+      glob: "**/*.go"
+      command: gofmt -w {{.Files | join " "}}

@@ -2,13 +2,29 @@
 description = "Run the application in development mode"
 run = "go run ./cmd/himo"
 
-[tasks.lint]
+[tasks."lint"]
+run = [{ tasks = ["lint:golangci", "lint:deadcode"] }]
+
+[tasks."lint:golangci"]
 description = "Run golangci-lint"
 run = "golangci-lint run"
 
-[tasks.lint-fix]
-description = "Fix golangci-lint issues automatically"
+[tasks."lint:golangci:fix"]
+description = "Run golangci-lint with --fix"
 run = "golangci-lint run --fix"
+
+[tasks."lint:deadcode"]
+description = "Run deadcode"
+run = """
+out=$(go run golang.org/x/tools/cmd/deadcode@latest -test ./...)
+if [ -n "$out" ]; then
+  echo "$out"
+  exit 1
+fi
+"""
+
+[tasks."lint:fix"]
+run = [{ tasks = ["lint:golangci:fix", "lint:deadcode"] }]
 
 [tasks.fmt]
 description = "Format code"
