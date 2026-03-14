@@ -37,4 +37,13 @@ Keep this file light. For implementation details, refer to:
 ## Coding Standard
 
 - use `testify` in tests
+- keep CLI integration tests build-based; prefer `helper_test.go` for shared test helpers
 - use `alecthomas/kong` to define CLI commands and flags
+- prefer template-first config validation, then schema-parse the evaluated shape
+- prefer `Oudwins/zog` (unreleased when needed for `z.EXPERIMENTAL_MAP`) for config schema validation
+- return aggregated validation errors via `errors.Join` instead of fail-fast when multiple config problems exist
+- use `bmatcuk/doublestar` for glob matching
+- use `spf13/afero` for file system operations
+  - High testability and flexibility for different environments
+- use `sabhiram/go-gitignore` for parsing and matching `.gitignore` files
+  - do not emit an external command N times inside a file loop; collect `.gitignore` files under `ConfigRoot`, prepend relative roots as needed, compile once, then match in memory
