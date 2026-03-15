@@ -112,10 +112,10 @@ seil teardown
 
 ### JSON output
 
-Use `--json` when another tool needs structured results.
+Use `--reporter json` when another tool needs structured results.
 
 ```bash
-seil --json post-edit internal/config/config.go
+seil --reporter json post-edit internal/config/config.go
 ```
 
 The JSON result is grouped into `failure`, `success`, and `skipped`.
@@ -167,8 +167,19 @@ teardown:
 - `setup` and `teardown` run all configured jobs in order.
 - `post-edit` skips jobs when the `glob` does not match the file path.
 - `post-edit` also skips jobs when the file is matched by `.gitignore`.
-- Output is text by default and includes status, exit code, log path, and a short summary.
+- Output is text by default and includes grouped results, exit code, log path, and a short summary.
 - If any hook fails, `seil` exits with status code `1`.
+
+### AI agent behavior
+
+- `--reporter auto` is the default.
+- `AI_AGENT` overrides automatic agent detection when `--reporter auto` is used.
+- `seil` can auto-detect `claude`, `cursor`, `devin`, `replit`, `gemini`, `codex`, `auggie`, `opencode`, `kiro`, `goose`, and `pi`.
+- `--reporter auto` selects an agent-specific reporter when one exists.
+- `--reporter json` always keeps the JSON reporter, even when an agent is detected.
+- `--reporter default` forces the default human-readable reporter.
+- `--reporter claude` forces the Claude reporter.
+- Agents without a dedicated reporter fall back to the default human-readable output.
 
 ## Development
 

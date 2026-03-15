@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -10,16 +9,18 @@ import (
 	"github.com/alecthomas/kong"
 
 	"github.com/sushichan044/seil"
+	"github.com/sushichan044/seil/internal/agent"
 	"github.com/sushichan044/seil/internal/config"
+	"github.com/sushichan044/seil/internal/reporter"
 	"github.com/sushichan044/seil/internal/runner"
 	"github.com/sushichan044/seil/internal/version"
 )
 
 type (
 	CLI struct {
-		Config  configFilePath   `short:"c" placeholder:"<path>" help:"Path to configuration file."    type:"existingfile"`
-		Version kong.VersionFlag `short:"v"`
-		JSON    bool             `                               help:"Output results in JSON format."`
+		Config   configFilePath   `short:"c" placeholder:"<path>" help:"Path to configuration file."                                    type:"existingfile"`
+		Version  kong.VersionFlag `short:"v"`
+		Reporter reporter.Name    `                               help:"Reporter to use for output. Possible values: ${reporter_names}"                     default:"auto" enum:"${reporter_names}"`
 
 		PostEdit PostEditCmd `cmd:"" help:"Run post-edit hooks for a file."`
 		Setup    SetupCmd    `cmd:"" help:"Run setup hooks."`
@@ -67,20 +68,7 @@ func (c *PostEditCmd) Run(cli *CLI, cfg *resolvedConfig) error {
 	if err != nil {
 		return fmt.Errorf("failed to run post-edit hooks: %w", err)
 	}
-
-	var hasFailure bool
-	if cli.JSON {
-		hasFailure, err = printJSON(results)
-	} else {
-		hasFailure, err = printText(results, "post-edit hooks result")
-	}
-	if err != nil {
-		return err
-	}
-	if hasFailure {
-		os.Exit(1)
-	}
-	return nil
+	return reportResults(results, cli.Reporter)
 }
 
 type SetupCmd struct {
@@ -96,20 +84,7 @@ func (c *SetupCmd) Run(cli *CLI, cfg *resolvedConfig) error {
 	if err != nil {
 		return fmt.Errorf("failed to run setup hooks: %w", err)
 	}
-
-	var hasFailure bool
-	if cli.JSON {
-		hasFailure, err = printJSON(results)
-	} else {
-		hasFailure, err = printText(results, "setup hooks result")
-	}
-	if err != nil {
-		return err
-	}
-	if hasFailure {
-		os.Exit(1)
-	}
-	return nil
+	return reportResults(results, cli.Reporter)
 }
 
 type TeardownCmd struct {
@@ -125,117 +100,27 @@ func (c *TeardownCmd) Run(cli *CLI, cfg *resolvedConfig) error {
 	if err != nil {
 		return fmt.Errorf("failed to run teardown hooks: %w", err)
 	}
+	return reportResults(results, cli.Reporter)
+}
 
-	var hasFailure bool
-	if cli.JSON {
-		hasFailure, err = printJSON(results)
-	} else {
-		hasFailure, err = printText(results, "teardown hooks result")
-	}
+func reportResults(results []runner.HookResult, name reporter.Name) error {
+	r := reporter.Resolve(name, agent.Detect())
+	exitCode, err := r.Report(results, os.Stdout, os.Stderr)
 	if err != nil {
 		return err
 	}
-	if hasFailure {
-		os.Exit(1)
+	if exitCode != 0 {
+		os.Exit(exitCode)
 	}
 	return nil
-}
-
-type groupedHookResults struct {
-	Failure []runner.HookResult `json:"failure"`
-	Success []runner.HookResult `json:"success"`
-	Skipped []runner.HookResult `json:"skipped"`
-}
-
-func groupResults(results []runner.HookResult) groupedHookResults {
-	g := groupedHookResults{
-		Failure: []runner.HookResult{},
-		Success: []runner.HookResult{},
-		Skipped: []runner.HookResult{},
-	}
-	for _, r := range results {
-		switch r.Status {
-		case runner.HookStatusFailure:
-			g.Failure = append(g.Failure, r)
-		case runner.HookStatusSuccess:
-			g.Success = append(g.Success, r)
-		case runner.HookStatusSkipped:
-			g.Skipped = append(g.Skipped, r)
-		}
-	}
-	return g
-}
-
-func printJSON(results []runner.HookResult) (bool, error) {
-	g := groupResults(results)
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return len(g.Failure) > 0, enc.Encode(g)
-}
-
-func printHookResult(r runner.HookResult) error {
-	if _, err := fmt.Fprintf(os.Stdout, "\nhook: %s\nstatus: %s\nexit_code: %d\nlog: %s\n",
-		r.Name, r.Status, r.ExitCode, r.LogPath); err != nil {
-		return err
-	}
-	if r.Summary != "" {
-		lines := strings.Split(r.Summary, "\n")
-		if _, err := fmt.Fprintln(os.Stdout, "summary:"); err != nil {
-			return err
-		}
-		for _, line := range lines {
-			if _, err := fmt.Fprintf(os.Stdout, "  %s\n", line); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func printText(results []runner.HookResult, title string) (bool, error) {
-	g := groupResults(results)
-
-	if _, err := fmt.Fprintf(os.Stdout, "=== %s ===\n", title); err != nil {
-		return false, err
-	}
-
-	if _, err := fmt.Fprintf(os.Stdout, "\n--- Failures (%d) ---\n", len(g.Failure)); err != nil {
-		return false, err
-	}
-	for _, r := range g.Failure {
-		if err := printHookResult(r); err != nil {
-			return false, err
-		}
-	}
-
-	if _, err := fmt.Fprintf(os.Stdout, "\n--- Successes (%d) ---\n", len(g.Success)); err != nil {
-		return false, err
-	}
-	for _, r := range g.Success {
-		if err := printHookResult(r); err != nil {
-			return false, err
-		}
-	}
-
-	if _, err := fmt.Fprintf(os.Stdout, "\n--- Skipped (%d) ---\n", len(g.Skipped)); err != nil {
-		return false, err
-	}
-	for _, r := range g.Skipped {
-		if err := printHookResult(r); err != nil {
-			return false, err
-		}
-	}
-
-	_, err := fmt.Fprintf(os.Stdout, "\n---\n%d succeeded, %d failed, %d skipped\n",
-		len(g.Success), len(g.Failure), len(g.Skipped))
-	return len(g.Failure) > 0, err
 }
 
 func main() {
 	cfg := resolvedConfig{}
 
 	ctx := kong.Parse(&CLI{}, kong.Vars{
-		"version": fmt.Sprintf("seil %s", version.Get()),
+		"version":        fmt.Sprintf("seil %s", version.Get()),
+		"reporter_names": strings.Join(reporter.ReporterNames, ","),
 	}, kong.Bind(&cfg))
 	ctx.FatalIfErrorf(ctx.Run())
 }

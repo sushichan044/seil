@@ -42,9 +42,18 @@ type runResult struct {
 
 func runSeil(t *testing.T, dir string, args ...string) runResult {
 	t.Helper()
+	return runSeilWithEnv(t, dir, nil, args...)
+}
+
+func runSeilWithEnv(t *testing.T, dir string, env map[string]string, args ...string) runResult {
+	t.Helper()
 	cmd := exec.Command(seilBin, args...)
 	if dir != "" {
 		cmd.Dir = dir
+	}
+	cmd.Env = filteredEnv(os.Environ())
+	for key, value := range env {
+		cmd.Env = append(cmd.Env, key+"="+value)
 	}
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
@@ -64,6 +73,35 @@ func runSeil(t *testing.T, dir string, args ...string) runResult {
 		Stderr:   stderr.String(),
 		ExitCode: exitCode,
 	}
+}
+
+func filteredEnv(environ []string) []string {
+	excluded := map[string]struct{}{
+		"AI_AGENT":        {},
+		"CLAUDECODE":      {},
+		"CLAUDE_CODE":     {},
+		"REPL_ID":         {},
+		"GEMINI_CLI":      {},
+		"CODEX_SANDBOX":   {},
+		"CODEX_THREAD_ID": {},
+		"OPENCODE":        {},
+		"AUGMENT_AGENT":   {},
+		"GOOSE_PROVIDER":  {},
+		"CURSOR_AGENT":    {},
+	}
+
+	filtered := make([]string, 0, len(environ))
+	for _, entry := range environ {
+		key, _, found := strings.Cut(entry, "=")
+		if !found {
+			continue
+		}
+		if _, ok := excluded[key]; ok {
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+	return filtered
 }
 
 type hookResultJSON struct {
@@ -117,7 +155,7 @@ teardown:
 	require.NoError(t, err)
 }
 
-// TestPostEdit_JSON_Schema verifies that --json outputs a valid JSON array with the correct schema.
+// TestPostEdit_JSON_Schema verifies that --reporter json outputs a valid JSON array with the correct schema.
 func TestPostEdit_JSON_Schema(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -128,7 +166,7 @@ func TestPostEdit_JSON_Schema(t *testing.T) {
 	require.NoError(t, err)
 
 	cfgPath := filepath.Join(tmpDir, "seil.yml")
-	result := runSeil(t, "", "-c", cfgPath, "post-edit", "--json", targetFile)
+	result := runSeil(t, "", "-c", cfgPath, "--reporter", "json", "post-edit", targetFile)
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 
@@ -144,7 +182,7 @@ func TestPostEdit_JSON_Schema(t *testing.T) {
 	assert.Equal(t, "hello", results.Success[0].Summary)
 }
 
-// TestPostEdit_TextFormat_IsDefault verifies that without --json the output is human-readable text.
+// TestPostEdit_TextFormat_IsDefault verifies that auto reporter uses human-readable text by default.
 func TestPostEdit_TextFormat_IsDefault(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -159,7 +197,7 @@ func TestPostEdit_TextFormat_IsDefault(t *testing.T) {
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 	assert.False(t, strings.HasPrefix(result.Stdout, "["), "stdout should not be a JSON array: %s", result.Stdout)
-	assert.Contains(t, result.Stdout, "=== post-edit hooks result ===")
+	assert.Contains(t, result.Stdout, "--- Failures (0) ---")
 }
 
 // TestConfig_ExplicitPath verifies that -c <path> loads config from outside the working directory.
@@ -174,7 +212,7 @@ func TestConfig_ExplicitPath(t *testing.T) {
 	require.NoError(t, err)
 
 	cfgPath := filepath.Join(configDir, "seil.yml")
-	result := runSeil(t, workDir, "-c", cfgPath, "post-edit", "--json", targetFile)
+	result := runSeil(t, workDir, "-c", cfgPath, "--reporter", "json", "post-edit", targetFile)
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 
@@ -186,14 +224,14 @@ func TestConfig_ExplicitPath(t *testing.T) {
 	assert.Equal(t, "lint", results.Success[0].Name)
 }
 
-// TestSetup_JSON_Schema verifies that setup --json outputs a valid JSON array.
+// TestSetup_JSON_Schema verifies that setup with --reporter json outputs a valid JSON array.
 func TestSetup_JSON_Schema(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	writeSetupSeilYML(t, tmpDir, "greet", "echo hello")
 
 	cfgPath := filepath.Join(tmpDir, "seil.yml")
-	result := runSeil(t, "", "-c", cfgPath, "setup", "--json")
+	result := runSeil(t, "", "-c", cfgPath, "--reporter", "json", "setup")
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 
@@ -208,14 +246,14 @@ func TestSetup_JSON_Schema(t *testing.T) {
 	assert.Equal(t, "hello", results.Success[0].Summary)
 }
 
-// TestTeardown_JSON_Schema verifies that teardown --json outputs a valid JSON array.
+// TestTeardown_JSON_Schema verifies that teardown with --reporter json outputs a valid JSON array.
 func TestTeardown_JSON_Schema(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	writeTeardownSeilYML(t, tmpDir, "cleanup", "echo cleaned")
 
 	cfgPath := filepath.Join(tmpDir, "seil.yml")
-	result := runSeil(t, "", "-c", cfgPath, "teardown", "--json")
+	result := runSeil(t, "", "-c", cfgPath, "--reporter", "json", "teardown")
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 
@@ -230,7 +268,7 @@ func TestTeardown_JSON_Schema(t *testing.T) {
 	assert.Equal(t, "cleaned", results.Success[0].Summary)
 }
 
-// TestSetup_TextFormat_IsDefault verifies that setup without --json outputs human-readable text.
+// TestSetup_TextFormat_IsDefault verifies that setup without --reporter uses human-readable text.
 func TestSetup_TextFormat_IsDefault(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -241,7 +279,7 @@ func TestSetup_TextFormat_IsDefault(t *testing.T) {
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 	assert.False(t, strings.HasPrefix(result.Stdout, "["), "stdout should not be a JSON array: %s", result.Stdout)
-	assert.Contains(t, result.Stdout, "=== setup hooks result ===")
+	assert.Contains(t, result.Stdout, "--- Failures (0) ---")
 }
 
 // TestConfig_AutoDiscovery verifies that without -c the config is discovered from the working directory.
@@ -258,7 +296,7 @@ func TestConfig_AutoDiscovery(t *testing.T) {
 	err = os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
-	result := runSeil(t, tmpDir, "post-edit", "--json", targetFile)
+	result := runSeil(t, tmpDir, "--reporter", "json", "post-edit", targetFile)
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 
@@ -270,7 +308,7 @@ func TestConfig_AutoDiscovery(t *testing.T) {
 	assert.Equal(t, "fmt", results.Success[0].Name)
 }
 
-// TestPostEdit_JSON_Failure_ExitCode verifies that --json exits with code 1 when a hook fails.
+// TestPostEdit_JSON_Failure_ExitCode verifies that reporter json exits with code 1 when a hook fails.
 func TestPostEdit_JSON_Failure_ExitCode(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -281,7 +319,7 @@ func TestPostEdit_JSON_Failure_ExitCode(t *testing.T) {
 	require.NoError(t, err)
 
 	cfgPath := filepath.Join(tmpDir, "seil.yml")
-	result := runSeil(t, "", "-c", cfgPath, "post-edit", "--json", targetFile)
+	result := runSeil(t, "", "-c", cfgPath, "--reporter", "json", "post-edit", targetFile)
 
 	assert.Equal(t, 1, result.ExitCode)
 
@@ -292,4 +330,110 @@ func TestPostEdit_JSON_Failure_ExitCode(t *testing.T) {
 
 	assert.Equal(t, "error", results.Failure[0].Name)
 	assert.Equal(t, "failure", results.Failure[0].Status)
+}
+
+func TestPostEdit_AIClaude_UsesClaudeReporter(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	writeSeilYML(t, tmpDir, "error", "echo boom && exit 1")
+
+	targetFile := filepath.Join(tmpDir, "main.go")
+	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
+	require.NoError(t, err)
+
+	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	result := runSeilWithEnv(t, "", map[string]string{
+		"AI_AGENT": "claude",
+	}, "-c", cfgPath, "post-edit", targetFile)
+
+	assert.Equal(t, 2, result.ExitCode)
+	assert.Equal(t, "0 succeeded, 1 failed, 0 skipped\n", result.Stdout)
+	assert.Contains(t, result.Stderr, "hook: error")
+	assert.NotContains(t, result.Stdout, "--- Failures")
+}
+
+func TestSetup_AIClaude_UsesSameReporterSelection(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	writeSetupSeilYML(t, tmpDir, "error", "echo boom && exit 1")
+
+	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	result := runSeilWithEnv(t, "", map[string]string{
+		"AI_AGENT": "claude",
+	}, "-c", cfgPath, "setup")
+
+	assert.Equal(t, 2, result.ExitCode)
+	assert.Equal(t, "0 succeeded, 1 failed, 0 skipped\n", result.Stdout)
+	assert.Contains(t, result.Stderr, "hook: error")
+}
+
+func TestPostEdit_ExplicitJSONReporterOverridesClaudeAutoSelection(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	writeSeilYML(t, tmpDir, "error", "exit 1")
+
+	targetFile := filepath.Join(tmpDir, "main.go")
+	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
+	require.NoError(t, err)
+
+	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	result := runSeilWithEnv(t, "", map[string]string{
+		"AI_AGENT": "claude",
+	}, "-c", cfgPath, "--reporter", "json", "post-edit", targetFile)
+
+	assert.Equal(t, 1, result.ExitCode)
+	assert.Empty(t, result.Stderr)
+
+	var results groupedResultsJSON
+	err = json.Unmarshal([]byte(result.Stdout), &results)
+	require.NoError(t, err)
+	require.Len(t, results.Failure, 1)
+}
+
+func TestExplicitClaudeReporterForcesClaudeBehavior(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	writeSeilYML(t, tmpDir, "error", "echo boom && exit 1")
+
+	targetFile := filepath.Join(tmpDir, "main.go")
+	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
+	require.NoError(t, err)
+
+	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	result := runSeil(t, "", "-c", cfgPath, "--reporter", "claude", "post-edit", targetFile)
+
+	assert.Equal(t, 2, result.ExitCode)
+	assert.Equal(t, "0 succeeded, 1 failed, 0 skipped\n", result.Stdout)
+	assert.Contains(t, result.Stderr, "hook: error")
+}
+
+func TestInvalidReporterFailsParsing(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	writeSetupSeilYML(t, tmpDir, "greet", "echo hello")
+
+	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	result := runSeil(t, "", "-c", cfgPath, "--reporter", "wat", "setup")
+
+	assert.NotEqual(t, 0, result.ExitCode)
+	assert.Contains(t, result.Stderr, "invalid reporter")
+}
+
+func TestAIAgent_OverridesAutoDetectedAgent(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	writeSeilYML(t, tmpDir, "error", "echo boom && exit 1")
+
+	targetFile := filepath.Join(tmpDir, "main.go")
+	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
+	require.NoError(t, err)
+
+	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	result := runSeilWithEnv(t, "", map[string]string{
+		"AI_AGENT":        "claude",
+		"CODEX_THREAD_ID": "thread-1",
+	}, "-c", cfgPath, "post-edit", targetFile)
+
+	assert.Equal(t, 2, result.ExitCode)
+	assert.Contains(t, result.Stderr, "hook: error")
 }
