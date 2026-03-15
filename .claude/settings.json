@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "seil post-edit $CLAUDE_FILE_PATH || exit 2"
+            "command": "jq -r '.tool_input.file_path' | xargs -I {} env AI_AGENT=claude seil post-edit {} || exit 2"
           }
         ]
       }
