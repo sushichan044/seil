@@ -7,7 +7,6 @@ import (
 
 	"github.com/sushichan044/himo/internal/config"
 	"github.com/sushichan044/himo/internal/runner"
-	"github.com/sushichan044/himo/internal/template"
 )
 
 func runTeardownHooks(
@@ -15,23 +14,5 @@ func runTeardownHooks(
 	cfg *config.ResolvedConfig,
 	fs afero.Fs,
 ) ([]runner.HookResult, error) {
-	hooks := cfg.Config.Teardown.Hooks
-	names := sortedKeys(hooks)
-
-	toRun := make([]runner.Hook, 0, len(names))
-	for _, name := range names {
-		hook := hooks[name]
-		cmd, err := template.EvalCommand(hook.Command, template.CommandVars{Files: []string{}})
-		if err != nil {
-			return nil, err
-		}
-		toRun = append(toRun, runner.Hook{Name: name, Command: cmd})
-	}
-
-	if len(toRun) == 0 {
-		return []runner.HookResult{}, nil
-	}
-
-	r := &runner.Runner{WorkDir: cfg.CWD, Fs: fs}
-	return r.Run(ctx, toRun)
+	return runSimpleHooks(ctx, cfg.CWD, fs, cfg.Config.Teardown.Jobs)
 }

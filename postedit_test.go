@@ -20,8 +20,8 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 			CWD: repoDir,
 			Config: config.Config{
 				PostEdit: config.PostEdit{
-					Hooks: map[string]config.FilePatternHook{
-						"fmt": {Glob: "**/*.ts", Command: "echo ts"},
+					Jobs: []config.FilePatternHook{
+						{Name: "fmt", Glob: "**/*.ts", Run: "echo ts"},
 					},
 				},
 			},
@@ -44,8 +44,8 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 			CWD: repoDir,
 			Config: config.Config{
 				PostEdit: config.PostEdit{
-					Hooks: map[string]config.FilePatternHook{
-						"fmt": {Glob: "**/*.go", Command: "echo go"},
+					Jobs: []config.FilePatternHook{
+						{Name: "fmt", Glob: "**/*.go", Run: "echo go"},
 					},
 				},
 			},
@@ -66,8 +66,8 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 			CWD: repoDir,
 			Config: config.Config{
 				PostEdit: config.PostEdit{
-					Hooks: map[string]config.FilePatternHook{
-						"echo": {Glob: "**/*.go", Command: "echo hello"},
+					Jobs: []config.FilePatternHook{
+						{Name: "echo", Glob: "**/*.go", Run: "echo hello"},
 					},
 				},
 			},
@@ -91,8 +91,8 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 			CWD: repoDir,
 			Config: config.Config{
 				PostEdit: config.PostEdit{
-					Hooks: map[string]config.FilePatternHook{
-						"fail": {Glob: "**/*.go", Command: "exit 1"},
+					Jobs: []config.FilePatternHook{
+						{Name: "fail", Glob: "**/*.go", Run: "exit 1"},
 					},
 				},
 			},
@@ -108,16 +108,16 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 		assert.Equal(t, 1, results[0].ExitCode)
 	})
 
-	t.Run("returns hooks sorted alphabetically", func(t *testing.T) {
+	t.Run("returns hooks in definition order", func(t *testing.T) {
 		repoDir := t.TempDir()
 		cfg := &config.ResolvedConfig{
 			CWD: repoDir,
 			Config: config.Config{
 				PostEdit: config.PostEdit{
-					Hooks: map[string]config.FilePatternHook{
-						"zzz": {Glob: "**/*.go", Command: "echo zzz"},
-						"aaa": {Glob: "**/*.go", Command: "echo aaa"},
-						"mmm": {Glob: "**/*.go", Command: "echo mmm"},
+					Jobs: []config.FilePatternHook{
+						{Name: "zzz", Glob: "**/*.go", Run: "echo zzz"},
+						{Name: "aaa", Glob: "**/*.go", Run: "echo aaa"},
+						{Name: "mmm", Glob: "**/*.go", Run: "echo mmm"},
 					},
 				},
 			},
@@ -129,9 +129,9 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 		results, err := ws.RunPostEditHooks(context.Background(), "main.go")
 		require.NoError(t, err)
 		require.Len(t, results, 3)
-		assert.Equal(t, "aaa", results[0].Name)
-		assert.Equal(t, "mmm", results[1].Name)
-		assert.Equal(t, "zzz", results[2].Name)
+		assert.Equal(t, "zzz", results[0].Name)
+		assert.Equal(t, "aaa", results[1].Name)
+		assert.Equal(t, "mmm", results[2].Name)
 	})
 
 	t.Run("executes hook when glob is empty (always run)", func(t *testing.T) {
@@ -140,8 +140,8 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 			CWD: repoDir,
 			Config: config.Config{
 				PostEdit: config.PostEdit{
-					Hooks: map[string]config.FilePatternHook{
-						"always": {Glob: "", Command: "echo always"},
+					Jobs: []config.FilePatternHook{
+						{Name: "always", Glob: "", Run: "echo always"},
 					},
 				},
 			},
@@ -164,8 +164,8 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 			CWD: repoDir,
 			Config: config.Config{
 				PostEdit: config.PostEdit{
-					Hooks: map[string]config.FilePatternHook{
-						"always": {Glob: "", Command: "echo always"},
+					Jobs: []config.FilePatternHook{
+						{Name: "always", Glob: "", Run: "echo always"},
 					},
 				},
 			},
@@ -186,8 +186,8 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 			CWD: repoDir,
 			Config: config.Config{
 				PostEdit: config.PostEdit{
-					Hooks: map[string]config.FilePatternHook{
-						"echo": {Glob: "**/*.go", Command: `echo {{.Files | join " "}}`},
+					Jobs: []config.FilePatternHook{
+						{Name: "echo", Glob: "**/*.go", Run: `echo {{.Files | join " "}}`},
 					},
 				},
 			},

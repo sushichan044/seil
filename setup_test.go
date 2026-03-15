@@ -19,8 +19,8 @@ func TestWorkspace_RunSetupHooks(t *testing.T) {
 			CWD: repoDir,
 			Config: config.Config{
 				Setup: config.Setup{
-					Hooks: map[string]config.SimpleHook{
-						"install": {Command: "echo installed"},
+					Jobs: []config.SimpleHook{
+						{Name: "install", Run: "echo installed"},
 					},
 				},
 			},
@@ -44,8 +44,8 @@ func TestWorkspace_RunSetupHooks(t *testing.T) {
 			CWD: repoDir,
 			Config: config.Config{
 				Setup: config.Setup{
-					Hooks: map[string]config.SimpleHook{
-						"fail": {Command: "exit 1"},
+					Jobs: []config.SimpleHook{
+						{Name: "fail", Run: "exit 1"},
 					},
 				},
 			},
@@ -61,16 +61,16 @@ func TestWorkspace_RunSetupHooks(t *testing.T) {
 		assert.Equal(t, 1, results[0].ExitCode)
 	})
 
-	t.Run("returns hooks sorted alphabetically", func(t *testing.T) {
+	t.Run("returns hooks in definition order", func(t *testing.T) {
 		repoDir := t.TempDir()
 		cfg := &config.ResolvedConfig{
 			CWD: repoDir,
 			Config: config.Config{
 				Setup: config.Setup{
-					Hooks: map[string]config.SimpleHook{
-						"zzz": {Command: "echo zzz"},
-						"aaa": {Command: "echo aaa"},
-						"mmm": {Command: "echo mmm"},
+					Jobs: []config.SimpleHook{
+						{Name: "zzz", Run: "echo zzz"},
+						{Name: "aaa", Run: "echo aaa"},
+						{Name: "mmm", Run: "echo mmm"},
 					},
 				},
 			},
@@ -82,9 +82,9 @@ func TestWorkspace_RunSetupHooks(t *testing.T) {
 		results, err := ws.RunSetupHooks(context.Background())
 		require.NoError(t, err)
 		require.Len(t, results, 3)
-		assert.Equal(t, "aaa", results[0].Name)
-		assert.Equal(t, "mmm", results[1].Name)
-		assert.Equal(t, "zzz", results[2].Name)
+		assert.Equal(t, "zzz", results[0].Name)
+		assert.Equal(t, "aaa", results[1].Name)
+		assert.Equal(t, "mmm", results[2].Name)
 	})
 
 	t.Run("returns empty slice when no hooks configured", func(t *testing.T) {
@@ -93,7 +93,7 @@ func TestWorkspace_RunSetupHooks(t *testing.T) {
 			CWD: repoDir,
 			Config: config.Config{
 				Setup: config.Setup{
-					Hooks: map[string]config.SimpleHook{},
+					Jobs: []config.SimpleHook{},
 				},
 			},
 		}

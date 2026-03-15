@@ -9,33 +9,31 @@ import (
 )
 
 var filePatternHookSchema = z.Struct(z.Shape{ //nolint:gochecknoglobals // zog schema initialized at package level
-	"glob":    z.String(),
-	"command": z.String().Required().Min(1),
+	"name": z.String(),
+	"glob": z.String(),
+	"run":  z.String().Required().Min(1),
 })
 
-var filePatternHooksSchema = z.EXPERIMENTAL_MAP[string, FilePatternHook]( //nolint:gochecknoglobals // zog schema initialized at package level
-	z.String(),
+var filePatternHooksSchema = z.Slice( //nolint:gochecknoglobals // zog schema initialized at package level
 	filePatternHookSchema,
 )
 
 var simpleHookSchema = z.Struct(z.Shape{ //nolint:gochecknoglobals // zog schema initialized at package level
-	"command": z.String().Required().Min(1),
+	"name": z.String(),
+	"run":  z.String().Required().Min(1),
 })
 
-var simpleHooksSchema = z.EXPERIMENTAL_MAP[string, SimpleHook]( //nolint:gochecknoglobals // zog schema initialized at package level
-	z.String(),
-	simpleHookSchema,
-)
+var simpleHooksSchema = z.Slice(simpleHookSchema) //nolint:gochecknoglobals // zog schema initialized at package level
 
 var configSchema = z.Struct(z.Shape{ //nolint:gochecknoglobals // zog schema initialized at package level
 	"postEdit": z.Struct(z.Shape{
-		"hooks": filePatternHooksSchema,
+		"jobs": filePatternHooksSchema,
 	}),
 	"setup": z.Struct(z.Shape{
-		"hooks": simpleHooksSchema,
+		"jobs": simpleHooksSchema,
 	}),
 	"teardown": z.Struct(z.Shape{
-		"hooks": simpleHooksSchema,
+		"jobs": simpleHooksSchema,
 	}),
 })
 

@@ -15,23 +15,28 @@ func runSetupHooks(
 	cfg *config.ResolvedConfig,
 	fs afero.Fs,
 ) ([]runner.HookResult, error) {
-	hooks := cfg.Config.Setup.Hooks
-	names := sortedKeys(hooks)
+	return runSimpleHooks(ctx, cfg.CWD, fs, cfg.Config.Setup.Jobs)
+}
 
-	toRun := make([]runner.Hook, 0, len(names))
-	for _, name := range names {
-		hook := hooks[name]
-		cmd, err := template.EvalCommand(hook.Command, template.CommandVars{Files: []string{}})
+func runSimpleHooks(
+	ctx context.Context,
+	workDir string,
+	fs afero.Fs,
+	jobs []config.SimpleHook,
+) ([]runner.HookResult, error) {
+	toRun := make([]runner.Hook, 0, len(jobs))
+	for _, job := range jobs {
+		cmd, err := template.EvalCommand(job.Run, template.CommandVars{Files: []string{}})
 		if err != nil {
 			return nil, err
 		}
-		toRun = append(toRun, runner.Hook{Name: name, Command: cmd})
+		toRun = append(toRun, runner.Hook{Name: job.Name, Command: cmd})
 	}
 
 	if len(toRun) == 0 {
 		return []runner.HookResult{}, nil
 	}
 
-	r := &runner.Runner{WorkDir: cfg.CWD, Fs: fs}
+	r := &runner.Runner{WorkDir: workDir, Fs: fs}
 	return r.Run(ctx, toRun)
 }

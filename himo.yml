@@ -1,10 +1,8 @@
 setup:
-  hooks:
-    go:
-      command: go mod tidy
+  jobs:
+    - run: go mod tidy
 
 post_edit:
-  hooks:
-    fmt:
-      glob: "**/*.go"
-      command: mise run fmt
+  jobs:
+    - glob: "**/*.go"
+      run: mise run lint && mise run format

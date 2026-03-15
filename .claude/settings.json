@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "himo post-edit $CLAUDE_FILE_PATH || exit 2"
+          }
+        ]
+      }
+    ]
+  }
+}

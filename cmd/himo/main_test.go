@@ -3,6 +3,7 @@ package main_test
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -81,21 +82,37 @@ type groupedResultsJSON struct {
 
 func writeHimoYML(t *testing.T, dir, hookName, command string) {
 	t.Helper()
-	content := "post_edit:\n  hooks:\n    " + hookName + ":\n      glob: '**/*.go'\n      command: '" + command + "'\n"
+	content := fmt.Sprintf(`
+post_edit:
+  jobs:
+    - name: %s
+      glob: '**/*.go'
+      run: '%s'
+`, hookName, command)
 	err := os.WriteFile(filepath.Join(dir, "himo.yml"), []byte(content), 0o644)
 	require.NoError(t, err)
 }
 
 func writeSetupHimoYML(t *testing.T, dir, hookName, command string) {
 	t.Helper()
-	content := "setup:\n  hooks:\n    " + hookName + ":\n      command: '" + command + "'\n"
+	content := fmt.Sprintf(`
+setup:
+  jobs:
+    - name: %s
+      run: '%s'
+`, hookName, command)
 	err := os.WriteFile(filepath.Join(dir, "himo.yml"), []byte(content), 0o644)
 	require.NoError(t, err)
 }
 
 func writeTeardownHimoYML(t *testing.T, dir, hookName, command string) {
 	t.Helper()
-	content := "teardown:\n  hooks:\n    " + hookName + ":\n      command: '" + command + "'\n"
+	content := fmt.Sprintf(`
+teardown:
+  jobs:
+    - name: %s
+      run: '%s'
+`, hookName, command)
 	err := os.WriteFile(filepath.Join(dir, "himo.yml"), []byte(content), 0o644)
 	require.NoError(t, err)
 }
