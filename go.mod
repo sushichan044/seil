@@ -6,6 +6,7 @@ require (
 	github.com/Oudwins/zog v0.22.1-0.20260207152405-f27b872631d1
 	github.com/alecthomas/kong v1.14.0
 	github.com/bmatcuk/doublestar/v4 v4.10.0
+	github.com/charmbracelet/x/exp/golden v0.0.0-20240806155701-69247e0abc2a
 	github.com/goccy/go-yaml v1.19.2
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/spf13/afero v1.15.0
@@ -14,6 +15,7 @@ require (
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
+	github.com/aymanbagabas/go-udiff v0.2.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
 	github.com/charmbracelet/lipgloss v1.1.0 // indirect
 	github.com/charmbracelet/x/ansi v0.11.6 // indirect

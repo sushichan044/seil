@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/x/exp/golden"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -40,11 +41,7 @@ func TestHumanReporter_Report(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, exitCode)
-	assert.Contains(t, stdout.String(), "--- Failures (1) ---")
-	assert.Contains(t, stdout.String(), "--- Successes (1) ---")
-	assert.Contains(t, stdout.String(), "--- Skipped (1) ---")
-	assert.Contains(t, stdout.String(), "1 succeeded, 1 failed, 1 skipped")
-	assert.NotContains(t, stdout.String(), "=== ")
+	golden.RequireEqual(t, []byte(stdout.String()))
 }
 
 func TestJSONReporter_Report(t *testing.T) {
