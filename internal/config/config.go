@@ -3,82 +3,38 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"regexp"
 
+	z "github.com/Oudwins/zog"
 	"github.com/goccy/go-yaml"
 
 	"github.com/sushichan044/seil/internal/git"
 	"github.com/sushichan044/seil/internal/pathutils"
 )
 
-const hookNameTruncateLen = 32
-
-var unsafeNameRe = regexp.MustCompile(`[^0-9A-Za-z_.\-]+`)
-
-type (
-	Config struct {
-		PostEdit PostEdit `yaml:"post_edit"`
-		Setup    Setup    `yaml:"setup"`
-		Teardown Teardown `yaml:"teardown"`
-	}
-
-	ResolvedConfig struct {
-		Config Config
-		Path   string
-		CWD    string
-	}
-
-	PostEdit struct {
-		Jobs []FilePatternHook `yaml:"jobs"`
-	}
-
-	FilePatternHook struct {
-		Name string `yaml:"name"`
-		Glob string `yaml:"glob"`
-		Run  string `yaml:"run"`
-	}
-
-	SimpleHook struct {
-		Name string `yaml:"name"`
-		Run  string `yaml:"run"`
-	}
-
-	Setup struct {
-		Jobs []SimpleHook `yaml:"jobs"`
-	}
-
-	Teardown struct {
-		Jobs []SimpleHook `yaml:"jobs"`
-	}
-)
-
-const defaultConfigFileName = "seil.yml"
-
-func Load(path string) (*ResolvedConfig, error) {
-	configPath, err := filepath.Abs(path)
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, err
-	}
-
-	config, err := ParseConfig(data)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ResolvedConfig{
-		Config: *config,
-		Path:   configPath,
-		CWD:    filepath.Dir(configPath),
-	}, nil
+type Config struct {
+	PostEdit PostEditHook `yaml:"post_edit"`
+	Setup    SetupHook    `yaml:"setup"`
+	Teardown TeardownHook `yaml:"teardown"`
 }
 
-// ParseConfig parses YAML bytes and returns a normalized, validated Config.
-func ParseConfig(data []byte) (*Config, error) {
+//nolint:gochecknoglobals // zog schema initialized at package level
+var configSchema = z.Struct(z.Shape{
+	"postEdit": postEditHookSchema,
+	"setup":    setupHookSchema,
+	"teardown": teardownHookSchema,
+})
+
+type ResolvedConfig struct {
+	Config Config
+	path   string
+}
+
+func (r *ResolvedConfig) CWD() string {
+	return filepath.Dir(r.path)
+}
+
+// ParseConfigYAML parses bytes and returns a validated Config.
+func ParseConfigYAML(data []byte) (*Config, error) {
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
@@ -88,36 +44,11 @@ func ParseConfig(data []byte) (*Config, error) {
 		return nil, err
 	}
 
-	normalizeConfig(&cfg)
 	return &cfg, nil
 }
 
-func normalizeConfig(cfg *Config) {
-	for i := range cfg.PostEdit.Jobs {
-		cfg.PostEdit.Jobs[i].Name = normalizeHookName(cfg.PostEdit.Jobs[i].Name, cfg.PostEdit.Jobs[i].Run)
-	}
-	for i := range cfg.Setup.Jobs {
-		cfg.Setup.Jobs[i].Name = normalizeHookName(cfg.Setup.Jobs[i].Name, cfg.Setup.Jobs[i].Run)
-	}
-	for i := range cfg.Teardown.Jobs {
-		cfg.Teardown.Jobs[i].Name = normalizeHookName(cfg.Teardown.Jobs[i].Name, cfg.Teardown.Jobs[i].Run)
-	}
-}
-
-func normalizeHookName(name, run string) string {
-	if name == "" {
-		r := []rune(run)
-		if len(r) > hookNameTruncateLen {
-			name = string(r[:hookNameTruncateLen])
-		} else {
-			name = run
-		}
-	}
-	return unsafeNameRe.ReplaceAllString(name, "-")
-}
-
-func ResolveConfigFilePathFrom(path string) (string, error) {
-	startDir, err := pathutils.DetermineDirectory(path)
+func FindConfigFile(fromPath string) (string, error) {
+	startDir, err := pathutils.DetermineDirectory(fromPath)
 	if err != nil {
 		return "", err
 	}
