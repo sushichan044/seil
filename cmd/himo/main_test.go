@@ -73,9 +73,29 @@ type hookResultJSON struct {
 	Summary  string `json:"summary"`
 }
 
+type groupedResultsJSON struct {
+	Failure []hookResultJSON `json:"failure"`
+	Success []hookResultJSON `json:"success"`
+	Skipped []hookResultJSON `json:"skipped"`
+}
+
 func writeHimoYML(t *testing.T, dir, hookName, command string) {
 	t.Helper()
 	content := "post_edit:\n  hooks:\n    " + hookName + ":\n      glob: '**/*.go'\n      command: '" + command + "'\n"
+	err := os.WriteFile(filepath.Join(dir, "himo.yml"), []byte(content), 0o644)
+	require.NoError(t, err)
+}
+
+func writeSetupHimoYML(t *testing.T, dir, hookName, command string) {
+	t.Helper()
+	content := "setup:\n  hooks:\n    " + hookName + ":\n      command: '" + command + "'\n"
+	err := os.WriteFile(filepath.Join(dir, "himo.yml"), []byte(content), 0o644)
+	require.NoError(t, err)
+}
+
+func writeTeardownHimoYML(t *testing.T, dir, hookName, command string) {
+	t.Helper()
+	content := "teardown:\n  hooks:\n    " + hookName + ":\n      command: '" + command + "'\n"
 	err := os.WriteFile(filepath.Join(dir, "himo.yml"), []byte(content), 0o644)
 	require.NoError(t, err)
 }
@@ -95,16 +115,16 @@ func TestPostEdit_JSON_Schema(t *testing.T) {
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 
-	var results []hookResultJSON
+	var results groupedResultsJSON
 	err = json.Unmarshal([]byte(result.Stdout), &results)
 	require.NoError(t, err, "stdout should be valid JSON: %s", result.Stdout)
-	require.Len(t, results, 1)
+	require.Len(t, results.Success, 1)
 
-	assert.Equal(t, "greet", results[0].Name)
-	assert.Equal(t, "success", results[0].Status)
-	assert.Equal(t, 0, results[0].ExitCode)
-	assert.NotEmpty(t, results[0].LogPath)
-	assert.Equal(t, "hello", results[0].Summary)
+	assert.Equal(t, "greet", results.Success[0].Name)
+	assert.Equal(t, "success", results.Success[0].Status)
+	assert.Equal(t, 0, results.Success[0].ExitCode)
+	assert.NotEmpty(t, results.Success[0].LogPath)
+	assert.Equal(t, "hello", results.Success[0].Summary)
 }
 
 // TestPostEdit_TextFormat_IsDefault verifies that without --json the output is human-readable text.
@@ -141,12 +161,70 @@ func TestConfig_ExplicitPath(t *testing.T) {
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 
-	var results []hookResultJSON
+	var results groupedResultsJSON
 	err = json.Unmarshal([]byte(result.Stdout), &results)
 	require.NoError(t, err, "stdout should be valid JSON: %s", result.Stdout)
-	require.NotEmpty(t, results)
+	require.NotEmpty(t, results.Success)
 
-	assert.Equal(t, "lint", results[0].Name)
+	assert.Equal(t, "lint", results.Success[0].Name)
+}
+
+// TestSetup_JSON_Schema verifies that setup --json outputs a valid JSON array.
+func TestSetup_JSON_Schema(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	writeSetupHimoYML(t, tmpDir, "greet", "echo hello")
+
+	cfgPath := filepath.Join(tmpDir, "himo.yml")
+	result := runHimo(t, "", "-c", cfgPath, "setup", "--json")
+
+	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
+
+	var results groupedResultsJSON
+	err := json.Unmarshal([]byte(result.Stdout), &results)
+	require.NoError(t, err, "stdout should be valid JSON: %s", result.Stdout)
+	require.Len(t, results.Success, 1)
+
+	assert.Equal(t, "greet", results.Success[0].Name)
+	assert.Equal(t, "success", results.Success[0].Status)
+	assert.Equal(t, 0, results.Success[0].ExitCode)
+	assert.Equal(t, "hello", results.Success[0].Summary)
+}
+
+// TestTeardown_JSON_Schema verifies that teardown --json outputs a valid JSON array.
+func TestTeardown_JSON_Schema(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	writeTeardownHimoYML(t, tmpDir, "cleanup", "echo cleaned")
+
+	cfgPath := filepath.Join(tmpDir, "himo.yml")
+	result := runHimo(t, "", "-c", cfgPath, "teardown", "--json")
+
+	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
+
+	var results groupedResultsJSON
+	err := json.Unmarshal([]byte(result.Stdout), &results)
+	require.NoError(t, err, "stdout should be valid JSON: %s", result.Stdout)
+	require.Len(t, results.Success, 1)
+
+	assert.Equal(t, "cleanup", results.Success[0].Name)
+	assert.Equal(t, "success", results.Success[0].Status)
+	assert.Equal(t, 0, results.Success[0].ExitCode)
+	assert.Equal(t, "cleaned", results.Success[0].Summary)
+}
+
+// TestSetup_TextFormat_IsDefault verifies that setup without --json outputs human-readable text.
+func TestSetup_TextFormat_IsDefault(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	writeSetupHimoYML(t, tmpDir, "greet", "echo hello")
+
+	cfgPath := filepath.Join(tmpDir, "himo.yml")
+	result := runHimo(t, "", "-c", cfgPath, "setup")
+
+	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
+	assert.False(t, strings.HasPrefix(result.Stdout, "["), "stdout should not be a JSON array: %s", result.Stdout)
+	assert.Contains(t, result.Stdout, "=== setup hooks result ===")
 }
 
 // TestConfig_AutoDiscovery verifies that without -c the config is discovered from the working directory.
@@ -167,10 +245,34 @@ func TestConfig_AutoDiscovery(t *testing.T) {
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 
-	var results []hookResultJSON
+	var results groupedResultsJSON
 	err = json.Unmarshal([]byte(result.Stdout), &results)
 	require.NoError(t, err, "stdout should be valid JSON: %s", result.Stdout)
-	require.NotEmpty(t, results)
+	require.NotEmpty(t, results.Success)
 
-	assert.Equal(t, "fmt", results[0].Name)
+	assert.Equal(t, "fmt", results.Success[0].Name)
+}
+
+// TestPostEdit_JSON_Failure_ExitCode verifies that --json exits with code 1 when a hook fails.
+func TestPostEdit_JSON_Failure_ExitCode(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	writeHimoYML(t, tmpDir, "error", "exit 1")
+
+	targetFile := filepath.Join(tmpDir, "main.go")
+	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
+	require.NoError(t, err)
+
+	cfgPath := filepath.Join(tmpDir, "himo.yml")
+	result := runHimo(t, "", "-c", cfgPath, "post-edit", "--json", targetFile)
+
+	assert.Equal(t, 1, result.ExitCode)
+
+	var results groupedResultsJSON
+	err = json.Unmarshal([]byte(result.Stdout), &results)
+	require.NoError(t, err, "stdout should be valid JSON: %s", result.Stdout)
+	require.Len(t, results.Failure, 1)
+
+	assert.Equal(t, "error", results.Failure[0].Name)
+	assert.Equal(t, "failure", results.Failure[0].Status)
 }

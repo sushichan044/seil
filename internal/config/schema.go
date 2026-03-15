@@ -8,30 +8,46 @@ import (
 	z "github.com/Oudwins/zog"
 )
 
-var hookSchema = z.Struct(z.Shape{ //nolint:gochecknoglobals // zog schema initialized at package level
-	"glob":    z.String().Required().Min(1),
+var filePatternHookSchema = z.Struct(z.Shape{ //nolint:gochecknoglobals // zog schema initialized at package level
+	"glob":    z.String(),
 	"command": z.String().Required().Min(1),
 })
 
-var hooksSchema = z.EXPERIMENTAL_MAP[string, Hook]( //nolint:gochecknoglobals // zog schema initialized at package level
+var filePatternHooksSchema = z.EXPERIMENTAL_MAP[string, FilePatternHook]( //nolint:gochecknoglobals // zog schema initialized at package level
 	z.String(),
-	hookSchema,
+	filePatternHookSchema,
 )
 
-// Validate validates a Config using zog schemas and returns a combined error.
-func Validate(cfg *Config) error {
-	issues := hooksSchema.Validate(&cfg.PostEdit.Hooks)
-	if len(issues) == 0 {
-		return nil
-	}
+var simpleHookSchema = z.Struct(z.Shape{ //nolint:gochecknoglobals // zog schema initialized at package level
+	"command": z.String().Required().Min(1),
+})
 
-	errs := make([]error, 0, len(issues))
+var simpleHooksSchema = z.EXPERIMENTAL_MAP[string, SimpleHook]( //nolint:gochecknoglobals // zog schema initialized at package level
+	z.String(),
+	simpleHookSchema,
+)
+
+var configSchema = z.Struct(z.Shape{ //nolint:gochecknoglobals // zog schema initialized at package level
+	"postEdit": z.Struct(z.Shape{
+		"hooks": filePatternHooksSchema,
+	}),
+	"setup": z.Struct(z.Shape{
+		"hooks": simpleHooksSchema,
+	}),
+	"teardown": z.Struct(z.Shape{
+		"hooks": simpleHooksSchema,
+	}),
+})
+
+func Validate(cfg *Config) error {
+	issues := configSchema.Validate(cfg)
+	var errs []error
 	for _, issue := range issues {
-		errs = append(errs, fmt.Errorf("hooks%s: %s", formatPath(issue.Path), issue.Message))
+		errs = append(errs, fmt.Errorf("%s: %s", formatPath(issue.Path), issue.Message))
 	}
 	return errors.Join(errs...)
 }
 
 func formatPath(path []string) string {
-	return strings.Join(path, "")
+	return strings.Join(path, ".")
 }

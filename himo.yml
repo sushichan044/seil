@@ -1,3 +1,8 @@
+setup:
+  hooks:
+    go:
+      command: go mod tidy
+
 post_edit:
   hooks:
     fmt:

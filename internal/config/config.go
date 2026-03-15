@@ -13,6 +13,8 @@ import (
 type (
 	Config struct {
 		PostEdit PostEdit `yaml:"post_edit"`
+		Setup    Setup    `yaml:"setup"`
+		Teardown Teardown `yaml:"teardown"`
 	}
 
 	ResolvedConfig struct {
@@ -22,12 +24,24 @@ type (
 	}
 
 	PostEdit struct {
-		Hooks map[string]Hook `yaml:"hooks"`
+		Hooks map[string]FilePatternHook `yaml:"hooks"`
 	}
 
-	Hook struct {
+	FilePatternHook struct {
 		Glob    string `yaml:"glob"`
 		Command string `yaml:"command"`
+	}
+
+	SimpleHook struct {
+		Command string `yaml:"command"`
+	}
+
+	Setup struct {
+		Hooks map[string]SimpleHook `yaml:"hooks"`
+	}
+
+	Teardown struct {
+		Hooks map[string]SimpleHook `yaml:"hooks"`
 	}
 )
 

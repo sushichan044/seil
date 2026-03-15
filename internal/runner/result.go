@@ -1,4 +1,4 @@
-package postedit
+package runner
 
 // HookStatus represents the outcome of a hook execution.
 type HookStatus string

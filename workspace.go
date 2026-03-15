@@ -7,32 +7,35 @@ import (
 
 	"github.com/sushichan044/himo/internal/config"
 	"github.com/sushichan044/himo/internal/gitignore"
-	"github.com/sushichan044/himo/internal/postedit"
+	"github.com/sushichan044/himo/internal/runner"
 )
 
 // Workspace provides the public API for himo operations.
 type Workspace struct {
-	config    *config.ResolvedConfig
-	gitignore *gitignore.Matcher
-	fs        afero.Fs
+	config *config.ResolvedConfig
+	fs     afero.Fs
 }
 
 // NewWorkspace creates a Workspace from the given resolved config.
 func NewWorkspace(cfg *config.ResolvedConfig) (*Workspace, error) {
-	fs := afero.NewOsFs()
-	m, err := gitignore.NewMatcherFromRoot(fs, cfg.CWD)
-	if err != nil {
-		return nil, err
-	}
-	return &Workspace{config: cfg, gitignore: m, fs: fs}, nil
+	return &Workspace{config: cfg, fs: afero.NewOsFs()}, nil
 }
 
 // RunPostEditHooks executes all post-edit hooks for the given file path.
-func (w *Workspace) RunPostEditHooks(ctx context.Context, filePath string) ([]postedit.HookResult, error) {
-	r := &postedit.Runner{
-		Config:    w.config,
-		Gitignore: w.gitignore,
-		Fs:        w.fs,
+func (w *Workspace) RunPostEditHooks(ctx context.Context, filePath string) ([]runner.HookResult, error) {
+	m, err := gitignore.NewMatcherFromRoot(w.fs, w.config.CWD)
+	if err != nil {
+		return nil, err
 	}
-	return r.Run(ctx, filePath)
+	return runPostEditHooks(ctx, w.config, m, w.fs, filePath)
+}
+
+// RunSetupHooks executes all setup hooks.
+func (w *Workspace) RunSetupHooks(ctx context.Context) ([]runner.HookResult, error) {
+	return runSetupHooks(ctx, w.config, w.fs)
+}
+
+// RunTeardownHooks executes all teardown hooks.
+func (w *Workspace) RunTeardownHooks(ctx context.Context) ([]runner.HookResult, error) {
+	return runTeardownHooks(ctx, w.config, w.fs)
 }

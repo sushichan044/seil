@@ -1,0 +1,108 @@
+package himo_test
+
+import (
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	himo "github.com/sushichan044/himo"
+	"github.com/sushichan044/himo/internal/config"
+	"github.com/sushichan044/himo/internal/runner"
+)
+
+func TestWorkspace_RunTeardownHooks(t *testing.T) {
+	t.Run("executes hook and returns success on exit code 0", func(t *testing.T) {
+		repoDir := t.TempDir()
+		cfg := &config.ResolvedConfig{
+			CWD: repoDir,
+			Config: config.Config{
+				Teardown: config.Teardown{
+					Hooks: map[string]config.SimpleHook{
+						"cleanup": {Command: "echo cleaned"},
+					},
+				},
+			},
+		}
+
+		ws, err := himo.NewWorkspace(cfg)
+		require.NoError(t, err)
+
+		results, err := ws.RunTeardownHooks(context.Background())
+		require.NoError(t, err)
+		require.Len(t, results, 1)
+		assert.Equal(t, "cleanup", results[0].Name)
+		assert.Equal(t, runner.HookStatusSuccess, results[0].Status)
+		assert.Equal(t, 0, results[0].ExitCode)
+		assert.Equal(t, "cleaned", results[0].Summary)
+	})
+
+	t.Run("returns failure when command exits non-zero", func(t *testing.T) {
+		repoDir := t.TempDir()
+		cfg := &config.ResolvedConfig{
+			CWD: repoDir,
+			Config: config.Config{
+				Teardown: config.Teardown{
+					Hooks: map[string]config.SimpleHook{
+						"fail": {Command: "exit 1"},
+					},
+				},
+			},
+		}
+
+		ws, err := himo.NewWorkspace(cfg)
+		require.NoError(t, err)
+
+		results, err := ws.RunTeardownHooks(context.Background())
+		require.NoError(t, err)
+		require.Len(t, results, 1)
+		assert.Equal(t, runner.HookStatusFailure, results[0].Status)
+		assert.Equal(t, 1, results[0].ExitCode)
+	})
+
+	t.Run("returns hooks sorted alphabetically", func(t *testing.T) {
+		repoDir := t.TempDir()
+		cfg := &config.ResolvedConfig{
+			CWD: repoDir,
+			Config: config.Config{
+				Teardown: config.Teardown{
+					Hooks: map[string]config.SimpleHook{
+						"zzz": {Command: "echo zzz"},
+						"aaa": {Command: "echo aaa"},
+						"mmm": {Command: "echo mmm"},
+					},
+				},
+			},
+		}
+
+		ws, err := himo.NewWorkspace(cfg)
+		require.NoError(t, err)
+
+		results, err := ws.RunTeardownHooks(context.Background())
+		require.NoError(t, err)
+		require.Len(t, results, 3)
+		assert.Equal(t, "aaa", results[0].Name)
+		assert.Equal(t, "mmm", results[1].Name)
+		assert.Equal(t, "zzz", results[2].Name)
+	})
+
+	t.Run("returns empty slice when no hooks configured", func(t *testing.T) {
+		repoDir := t.TempDir()
+		cfg := &config.ResolvedConfig{
+			CWD: repoDir,
+			Config: config.Config{
+				Teardown: config.Teardown{
+					Hooks: map[string]config.SimpleHook{},
+				},
+			},
+		}
+
+		ws, err := himo.NewWorkspace(cfg)
+		require.NoError(t, err)
+
+		results, err := ws.RunTeardownHooks(context.Background())
+		require.NoError(t, err)
+		assert.Empty(t, results)
+	})
+}

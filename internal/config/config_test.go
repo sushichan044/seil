@@ -87,6 +87,34 @@ func TestLoad(t *testing.T) {
 		assert.Len(t, got.Config.PostEdit.Hooks, 1)
 		assert.Equal(t, "**/*.go", got.Config.PostEdit.Hooks["fmt"].Glob)
 	})
+
+	t.Run("loads setup and teardown hooks", func(t *testing.T) {
+		configDir := t.TempDir()
+		configPath := filepath.Join(configDir, "himo.yml")
+		mustWriteFile(t, configPath, []byte(
+			"setup:\n  hooks:\n    install:\n      command: 'mise install'\n"+
+				"teardown:\n  hooks:\n    cleanup:\n      command: 'mise run cleanup'\n",
+		))
+
+		got, err := config.Load(configPath)
+		require.NoError(t, err)
+
+		assert.Len(t, got.Config.Setup.Hooks, 1)
+		assert.Equal(t, "mise install", got.Config.Setup.Hooks["install"].Command)
+		assert.Len(t, got.Config.Teardown.Hooks, 1)
+		assert.Equal(t, "mise run cleanup", got.Config.Teardown.Hooks["cleanup"].Command)
+	})
+
+	t.Run("rejects setup hook with empty command", func(t *testing.T) {
+		configDir := t.TempDir()
+		configPath := filepath.Join(configDir, "himo.yml")
+		mustWriteFile(t, configPath, []byte(
+			"setup:\n  hooks:\n    install:\n      command: ''\n",
+		))
+
+		_, err := config.Load(configPath)
+		assert.Error(t, err)
+	})
 }
 
 func mustMkdirAll(t *testing.T, path string) {
