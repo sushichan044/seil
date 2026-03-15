@@ -1,6 +1,13 @@
 # [env]
 # _.path = "dist/seil_darwin_arm64_v8.0" # Please change depends on your OS
 
+[settings]
+experimental = true
+idiomatic_version_file_enable_tools = ["go"]
+
+[prepare.go]
+auto = true
+
 [tasks.dev]
 description = "Run the application in development mode"
 run = "go run ./cmd/seil"
@@ -54,6 +61,3 @@ run = """
 rm -rf bin/
 go clean
 """
-
-[settings]
-idiomatic_version_file_enable_tools = ["go"]
