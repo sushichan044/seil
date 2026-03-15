@@ -1,14 +1,10 @@
 package config
 
 import (
-	"os"
 	"path/filepath"
 
 	z "github.com/Oudwins/zog"
 	"github.com/goccy/go-yaml"
-
-	"github.com/sushichan044/seil/internal/git"
-	"github.com/sushichan044/seil/internal/pathutils"
 )
 
 type Config struct {
@@ -45,29 +41,4 @@ func ParseConfigYAML(data []byte) (*Config, error) {
 	}
 
 	return &cfg, nil
-}
-
-func FindConfigFile(fromPath string) (string, error) {
-	startDir, err := pathutils.DetermineDirectory(fromPath)
-	if err != nil {
-		return "", err
-	}
-
-	repoRoot, err := git.FindRepoRootFrom(startDir)
-	if err != nil {
-		return "", err
-	}
-
-	for dir := startDir; ; dir = filepath.Dir(dir) {
-		configPath := filepath.Join(dir, defaultConfigFileName)
-		if _, statErr := os.Stat(configPath); statErr == nil {
-			return configPath, nil
-		} else if !os.IsNotExist(statErr) {
-			return "", statErr
-		}
-
-		if dir == repoRoot {
-			return "", nil
-		}
-	}
 }
