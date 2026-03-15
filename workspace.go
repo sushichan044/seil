@@ -1,16 +1,16 @@
-package himo
+package seil
 
 import (
 	"context"
 
 	"github.com/spf13/afero"
 
-	"github.com/sushichan044/himo/internal/config"
-	"github.com/sushichan044/himo/internal/gitignore"
-	"github.com/sushichan044/himo/internal/runner"
+	"github.com/sushichan044/seil/internal/config"
+	"github.com/sushichan044/seil/internal/gitignore"
+	"github.com/sushichan044/seil/internal/runner"
 )
 
-// Workspace provides the public API for himo operations.
+// Workspace provides the public API for seil operations.
 type Workspace struct {
 	config *config.ResolvedConfig
 	fs     afero.Fs

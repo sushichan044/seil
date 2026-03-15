@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sushichan044/himo/internal/pathutils"
+	"github.com/sushichan044/seil/internal/pathutils"
 )
 
 var ErrNotInGitRepo = errors.New("not in a git repository")

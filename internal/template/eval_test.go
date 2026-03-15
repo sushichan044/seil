@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	tmpl "github.com/sushichan044/himo/internal/template"
+	tmpl "github.com/sushichan044/seil/internal/template"
 )
 
 func TestEvalConfig(t *testing.T) {

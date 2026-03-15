@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "himo post-edit $CLAUDE_FILE_PATH || exit 2"
+            "command": "seil post-edit $CLAUDE_FILE_PATH || exit 2"
           }
         ]
       }

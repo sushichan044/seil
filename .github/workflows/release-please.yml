@@ -19,7 +19,7 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-24.04
-    if: github.repository == 'sushichan044/himo'
+    if: github.repository == 'sushichan044/seil'
     permissions:
       contents: write
       issues: write

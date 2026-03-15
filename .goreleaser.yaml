@@ -7,9 +7,9 @@ before:
     - go generate ./...
 
 builds:
-  - main: ./cmd/himo
-    id: himo
-    binary: himo
+  - main: ./cmd/seil
+    id: seil
+    binary: seil
     env:
       - CGO_ENABLED=0
     goos:
@@ -54,7 +54,7 @@ release:
   use_existing_draft: true
   github:
     owner: sushichan044
-    name: himo
+    name: seil
   footer: >-
 
     ---

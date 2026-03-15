@@ -1,4 +1,4 @@
-package himo_test
+package seil_test
 
 import (
 	"context"
@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	himo "github.com/sushichan044/himo"
-	"github.com/sushichan044/himo/internal/config"
-	"github.com/sushichan044/himo/internal/runner"
+	"github.com/sushichan044/seil"
+	"github.com/sushichan044/seil/internal/config"
+	"github.com/sushichan044/seil/internal/runner"
 )
 
 func TestWorkspace_RunPostEditHooks(t *testing.T) {
@@ -27,7 +27,7 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 			},
 		}
 
-		ws, err := himo.NewWorkspace(cfg)
+		ws, err := seil.NewWorkspace(cfg)
 		require.NoError(t, err)
 
 		results, err := ws.RunPostEditHooks(context.Background(), "main.go")
@@ -51,7 +51,7 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 			},
 		}
 
-		ws, err := himo.NewWorkspace(cfg)
+		ws, err := seil.NewWorkspace(cfg)
 		require.NoError(t, err)
 
 		results, err := ws.RunPostEditHooks(context.Background(), "main.go")
@@ -73,7 +73,7 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 			},
 		}
 
-		ws, err := himo.NewWorkspace(cfg)
+		ws, err := seil.NewWorkspace(cfg)
 		require.NoError(t, err)
 
 		results, err := ws.RunPostEditHooks(context.Background(), "main.go")
@@ -98,7 +98,7 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 			},
 		}
 
-		ws, err := himo.NewWorkspace(cfg)
+		ws, err := seil.NewWorkspace(cfg)
 		require.NoError(t, err)
 
 		results, err := ws.RunPostEditHooks(context.Background(), "main.go")
@@ -123,7 +123,7 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 			},
 		}
 
-		ws, err := himo.NewWorkspace(cfg)
+		ws, err := seil.NewWorkspace(cfg)
 		require.NoError(t, err)
 
 		results, err := ws.RunPostEditHooks(context.Background(), "main.go")
@@ -147,7 +147,7 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 			},
 		}
 
-		ws, err := himo.NewWorkspace(cfg)
+		ws, err := seil.NewWorkspace(cfg)
 		require.NoError(t, err)
 
 		results, err := ws.RunPostEditHooks(context.Background(), "main.go")
@@ -171,7 +171,7 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 			},
 		}
 
-		ws, err := himo.NewWorkspace(cfg)
+		ws, err := seil.NewWorkspace(cfg)
 		require.NoError(t, err)
 
 		results, err := ws.RunPostEditHooks(context.Background(), "main.go")
@@ -193,7 +193,7 @@ func TestWorkspace_RunPostEditHooks(t *testing.T) {
 			},
 		}
 
-		ws, err := himo.NewWorkspace(cfg)
+		ws, err := seil.NewWorkspace(cfg)
 		require.NoError(t, err)
 
 		results, err := ws.RunPostEditHooks(context.Background(), "main.go")

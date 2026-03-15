@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/sushichan044/himo/internal/gitignore"
+	"github.com/sushichan044/seil/internal/gitignore"
 )
 
 func TestNewMatcherFromRoot(t *testing.T) {

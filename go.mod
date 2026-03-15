@@ -1,4 +1,4 @@
-module github.com/sushichan044/himo
+module github.com/sushichan044/seil
 
 go 1.26.0
 

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/sushichan044/himo/internal/runner"
+	"github.com/sushichan044/seil/internal/runner"
 )
 
 func TestRunner_Run(t *testing.T) {

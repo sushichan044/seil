@@ -8,16 +8,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/sushichan044/himo/internal/config"
-	"github.com/sushichan044/himo/internal/git"
+	"github.com/sushichan044/seil/internal/config"
+	"github.com/sushichan044/seil/internal/git"
 )
 
 func TestResolveConfigFilePathFrom(t *testing.T) {
-	t.Run("finds himo.yml in ancestor directory within git repo", func(t *testing.T) {
+	t.Run("finds seil.yml in ancestor directory within git repo", func(t *testing.T) {
 		repoRoot := t.TempDir()
 		mustMkdirAll(t, filepath.Join(repoRoot, ".git"))
 
-		configPath := filepath.Join(repoRoot, "nested", "himo.yml")
+		configPath := filepath.Join(repoRoot, "nested", "seil.yml")
 		mustMkdirAll(t, filepath.Dir(configPath))
 		mustWriteFile(t, configPath, []byte("post_edit:\n  jobs: []\n"))
 
@@ -36,7 +36,7 @@ func TestResolveConfigFilePathFrom(t *testing.T) {
 
 		mustMkdirAll(t, filepath.Join(repoRoot, ".git"))
 		mustMkdirAll(t, startDir)
-		mustWriteFile(t, filepath.Join(parent, "himo.yml"), []byte("post_edit:\n  jobs: []\n"))
+		mustWriteFile(t, filepath.Join(parent, "seil.yml"), []byte("post_edit:\n  jobs: []\n"))
 
 		got, err := config.ResolveConfigFilePathFrom(startDir)
 		require.NoError(t, err)
@@ -47,7 +47,7 @@ func TestResolveConfigFilePathFrom(t *testing.T) {
 		repoRoot := t.TempDir()
 		mustMkdirAll(t, filepath.Join(repoRoot, ".git"))
 
-		configPath := filepath.Join(repoRoot, "himo.yml")
+		configPath := filepath.Join(repoRoot, "seil.yml")
 		mustWriteFile(t, configPath, []byte("post_edit:\n  jobs: []\n"))
 
 		sourceFilePath := filepath.Join(repoRoot, "nested", "file.go")
@@ -61,7 +61,7 @@ func TestResolveConfigFilePathFrom(t *testing.T) {
 
 	t.Run("returns not found when outside git repo", func(t *testing.T) {
 		startDir := t.TempDir()
-		mustWriteFile(t, filepath.Join(startDir, "himo.yml"), []byte("post_edit:\n  jobs: []\n"))
+		mustWriteFile(t, filepath.Join(startDir, "seil.yml"), []byte("post_edit:\n  jobs: []\n"))
 
 		_, err := config.ResolveConfigFilePathFrom(startDir)
 		assert.ErrorIs(t, err, git.ErrNotInGitRepo)
@@ -141,7 +141,7 @@ setup:
 func TestLoad(t *testing.T) {
 	t.Run("uses explicit config path and sets cwd from it", func(t *testing.T) {
 		configDir := filepath.Join(t.TempDir(), "config")
-		configPath := filepath.Join(configDir, "himo.yml")
+		configPath := filepath.Join(configDir, "seil.yml")
 		mustMkdirAll(t, configDir)
 		mustWriteFile(t, configPath, []byte(`
 post_edit:
@@ -162,7 +162,7 @@ post_edit:
 
 	t.Run("loads setup and teardown hooks", func(t *testing.T) {
 		configDir := t.TempDir()
-		configPath := filepath.Join(configDir, "himo.yml")
+		configPath := filepath.Join(configDir, "seil.yml")
 		mustWriteFile(t, configPath, []byte(`
 setup:
   jobs:
@@ -185,7 +185,7 @@ teardown:
 
 	t.Run("rejects setup hook with empty command", func(t *testing.T) {
 		configDir := t.TempDir()
-		configPath := filepath.Join(configDir, "himo.yml")
+		configPath := filepath.Join(configDir, "seil.yml")
 		mustWriteFile(t, configPath, []byte(`
 setup:
   jobs:

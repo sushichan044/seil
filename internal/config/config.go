@@ -7,8 +7,8 @@ import (
 
 	"github.com/goccy/go-yaml"
 
-	"github.com/sushichan044/himo/internal/git"
-	"github.com/sushichan044/himo/internal/pathutils"
+	"github.com/sushichan044/seil/internal/git"
+	"github.com/sushichan044/seil/internal/pathutils"
 )
 
 const hookNameTruncateLen = 32
@@ -52,7 +52,7 @@ type (
 	}
 )
 
-const defaultConfigFileName = "himo.yml"
+const defaultConfigFileName = "seil.yml"
 
 func Load(path string) (*ResolvedConfig, error) {
 	configPath, err := filepath.Abs(path)

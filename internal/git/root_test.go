@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/sushichan044/himo/internal/git"
+	"github.com/sushichan044/seil/internal/git"
 )
 
 func TestFindRepoRootFrom(t *testing.T) {

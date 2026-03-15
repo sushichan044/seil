@@ -17,7 +17,7 @@ mise run build-snapshot     # Build cross-platform binaries with goreleaser
 mise run clean              # Remove generated files
 
 # Standard Go commands
-go run ./cmd/himo           # Run CLI in development mode
+go run ./cmd/seil           # Run CLI in development mode
 go test ./...               # Run all tests
 go mod tidy                 # Clean up dependencies
 ```

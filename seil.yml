@@ -5,4 +5,4 @@ setup:
 post_edit:
   jobs:
     - glob: "**/*.go"
-      run: mise run lint && mise run format
+      run: mise run lint && mise run fmt

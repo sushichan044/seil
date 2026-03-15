@@ -1,13 +1,13 @@
-package himo
+package seil
 
 import (
 	"context"
 
 	"github.com/spf13/afero"
 
-	"github.com/sushichan044/himo/internal/config"
-	"github.com/sushichan044/himo/internal/runner"
-	"github.com/sushichan044/himo/internal/template"
+	"github.com/sushichan044/seil/internal/config"
+	"github.com/sushichan044/seil/internal/runner"
+	"github.com/sushichan044/seil/internal/template"
 )
 
 func runSetupHooks(

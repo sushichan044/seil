@@ -14,16 +14,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var himoBin string //nolint:gochecknoglobals // shared across tests via TestMain
+var seilBin string //nolint:gochecknoglobals // shared across tests via TestMain
 
 func TestMain(m *testing.M) {
-	dir, err := os.MkdirTemp("", "himo-test-bin-*")
+	dir, err := os.MkdirTemp("", "seil-test-bin-*")
 	if err != nil {
 		panic("failed to create temp dir: " + err.Error())
 	}
 
-	himoBin = filepath.Join(dir, "himo")
-	out, err := exec.Command("go", "build", "-o", himoBin, ".").CombinedOutput()
+	seilBin = filepath.Join(dir, "seil")
+	out, err := exec.Command("go", "build", "-o", seilBin, ".").CombinedOutput()
 	if err != nil {
 		os.RemoveAll(dir)
 		panic("go build failed:\n" + string(out))
@@ -40,9 +40,9 @@ type runResult struct {
 	ExitCode int
 }
 
-func runHimo(t *testing.T, dir string, args ...string) runResult {
+func runSeil(t *testing.T, dir string, args ...string) runResult {
 	t.Helper()
-	cmd := exec.Command(himoBin, args...)
+	cmd := exec.Command(seilBin, args...)
 	if dir != "" {
 		cmd.Dir = dir
 	}
@@ -56,7 +56,7 @@ func runHimo(t *testing.T, dir string, args ...string) runResult {
 		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			exitCode = exitErr.ExitCode()
 		} else {
-			t.Fatalf("unexpected error running himo: %v", err)
+			t.Fatalf("unexpected error running seil: %v", err)
 		}
 	}
 	return runResult{
@@ -80,7 +80,7 @@ type groupedResultsJSON struct {
 	Skipped []hookResultJSON `json:"skipped"`
 }
 
-func writeHimoYML(t *testing.T, dir, hookName, command string) {
+func writeSeilYML(t *testing.T, dir, hookName, command string) {
 	t.Helper()
 	content := fmt.Sprintf(`
 post_edit:
@@ -89,11 +89,11 @@ post_edit:
       glob: '**/*.go'
       run: '%s'
 `, hookName, command)
-	err := os.WriteFile(filepath.Join(dir, "himo.yml"), []byte(content), 0o644)
+	err := os.WriteFile(filepath.Join(dir, "seil.yml"), []byte(content), 0o644)
 	require.NoError(t, err)
 }
 
-func writeSetupHimoYML(t *testing.T, dir, hookName, command string) {
+func writeSetupSeilYML(t *testing.T, dir, hookName, command string) {
 	t.Helper()
 	content := fmt.Sprintf(`
 setup:
@@ -101,11 +101,11 @@ setup:
     - name: %s
       run: '%s'
 `, hookName, command)
-	err := os.WriteFile(filepath.Join(dir, "himo.yml"), []byte(content), 0o644)
+	err := os.WriteFile(filepath.Join(dir, "seil.yml"), []byte(content), 0o644)
 	require.NoError(t, err)
 }
 
-func writeTeardownHimoYML(t *testing.T, dir, hookName, command string) {
+func writeTeardownSeilYML(t *testing.T, dir, hookName, command string) {
 	t.Helper()
 	content := fmt.Sprintf(`
 teardown:
@@ -113,7 +113,7 @@ teardown:
     - name: %s
       run: '%s'
 `, hookName, command)
-	err := os.WriteFile(filepath.Join(dir, "himo.yml"), []byte(content), 0o644)
+	err := os.WriteFile(filepath.Join(dir, "seil.yml"), []byte(content), 0o644)
 	require.NoError(t, err)
 }
 
@@ -121,14 +121,14 @@ teardown:
 func TestPostEdit_JSON_Schema(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeHimoYML(t, tmpDir, "greet", "echo hello")
+	writeSeilYML(t, tmpDir, "greet", "echo hello")
 
 	targetFile := filepath.Join(tmpDir, "main.go")
 	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
-	cfgPath := filepath.Join(tmpDir, "himo.yml")
-	result := runHimo(t, "", "-c", cfgPath, "post-edit", "--json", targetFile)
+	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	result := runSeil(t, "", "-c", cfgPath, "post-edit", "--json", targetFile)
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 
@@ -148,14 +148,14 @@ func TestPostEdit_JSON_Schema(t *testing.T) {
 func TestPostEdit_TextFormat_IsDefault(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeHimoYML(t, tmpDir, "greet", "echo hello")
+	writeSeilYML(t, tmpDir, "greet", "echo hello")
 
 	targetFile := filepath.Join(tmpDir, "main.go")
 	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
-	cfgPath := filepath.Join(tmpDir, "himo.yml")
-	result := runHimo(t, "", "-c", cfgPath, "post-edit", targetFile)
+	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	result := runSeil(t, "", "-c", cfgPath, "post-edit", targetFile)
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 	assert.False(t, strings.HasPrefix(result.Stdout, "["), "stdout should not be a JSON array: %s", result.Stdout)
@@ -167,14 +167,14 @@ func TestConfig_ExplicitPath(t *testing.T) {
 	configDir := t.TempDir()
 	workDir := t.TempDir()
 
-	writeHimoYML(t, configDir, "lint", "echo linted")
+	writeSeilYML(t, configDir, "lint", "echo linted")
 
 	targetFile := filepath.Join(workDir, "app.go")
 	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
-	cfgPath := filepath.Join(configDir, "himo.yml")
-	result := runHimo(t, workDir, "-c", cfgPath, "post-edit", "--json", targetFile)
+	cfgPath := filepath.Join(configDir, "seil.yml")
+	result := runSeil(t, workDir, "-c", cfgPath, "post-edit", "--json", targetFile)
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 
@@ -190,10 +190,10 @@ func TestConfig_ExplicitPath(t *testing.T) {
 func TestSetup_JSON_Schema(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeSetupHimoYML(t, tmpDir, "greet", "echo hello")
+	writeSetupSeilYML(t, tmpDir, "greet", "echo hello")
 
-	cfgPath := filepath.Join(tmpDir, "himo.yml")
-	result := runHimo(t, "", "-c", cfgPath, "setup", "--json")
+	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	result := runSeil(t, "", "-c", cfgPath, "setup", "--json")
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 
@@ -212,10 +212,10 @@ func TestSetup_JSON_Schema(t *testing.T) {
 func TestTeardown_JSON_Schema(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeTeardownHimoYML(t, tmpDir, "cleanup", "echo cleaned")
+	writeTeardownSeilYML(t, tmpDir, "cleanup", "echo cleaned")
 
-	cfgPath := filepath.Join(tmpDir, "himo.yml")
-	result := runHimo(t, "", "-c", cfgPath, "teardown", "--json")
+	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	result := runSeil(t, "", "-c", cfgPath, "teardown", "--json")
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 
@@ -234,10 +234,10 @@ func TestTeardown_JSON_Schema(t *testing.T) {
 func TestSetup_TextFormat_IsDefault(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeSetupHimoYML(t, tmpDir, "greet", "echo hello")
+	writeSetupSeilYML(t, tmpDir, "greet", "echo hello")
 
-	cfgPath := filepath.Join(tmpDir, "himo.yml")
-	result := runHimo(t, "", "-c", cfgPath, "setup")
+	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	result := runSeil(t, "", "-c", cfgPath, "setup")
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 	assert.False(t, strings.HasPrefix(result.Stdout, "["), "stdout should not be a JSON array: %s", result.Stdout)
@@ -252,13 +252,13 @@ func TestConfig_AutoDiscovery(t *testing.T) {
 	err := os.Mkdir(filepath.Join(tmpDir, ".git"), 0o755)
 	require.NoError(t, err)
 
-	writeHimoYML(t, tmpDir, "fmt", "echo formatted")
+	writeSeilYML(t, tmpDir, "fmt", "echo formatted")
 
 	targetFile := filepath.Join(tmpDir, "main.go")
 	err = os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
-	result := runHimo(t, tmpDir, "post-edit", "--json", targetFile)
+	result := runSeil(t, tmpDir, "post-edit", "--json", targetFile)
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 
@@ -274,14 +274,14 @@ func TestConfig_AutoDiscovery(t *testing.T) {
 func TestPostEdit_JSON_Failure_ExitCode(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeHimoYML(t, tmpDir, "error", "exit 1")
+	writeSeilYML(t, tmpDir, "error", "exit 1")
 
 	targetFile := filepath.Join(tmpDir, "main.go")
 	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
-	cfgPath := filepath.Join(tmpDir, "himo.yml")
-	result := runHimo(t, "", "-c", cfgPath, "post-edit", "--json", targetFile)
+	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	result := runSeil(t, "", "-c", cfgPath, "post-edit", "--json", targetFile)
 
 	assert.Equal(t, 1, result.ExitCode)
 

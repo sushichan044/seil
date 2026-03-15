@@ -31,7 +31,7 @@ type Hook struct {
 
 // Run executes hooks in the given order and returns their results.
 func (r *Runner) Run(ctx context.Context, hooks []Hook) ([]HookResult, error) {
-	logDir, err := os.MkdirTemp("", "himo-")
+	logDir, err := os.MkdirTemp("", "seil-")
 	if err != nil {
 		return nil, err
 	}

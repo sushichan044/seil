@@ -1,9 +1,9 @@
 # [env]
-# _.path = "dist/himo_darwin_arm64_v8.0" # Please change depends on your OS
+# _.path = "dist/seil_darwin_arm64_v8.0" # Please change depends on your OS
 
 [tasks.dev]
 description = "Run the application in development mode"
-run = "go run ./cmd/himo"
+run = "go run ./cmd/seil"
 
 [tasks."lint"]
 run = [{ tasks = ["lint:golangci", "lint:deadcode", "lint:gofix"] }]

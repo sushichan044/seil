@@ -9,10 +9,10 @@ import (
 
 	"github.com/alecthomas/kong"
 
-	"github.com/sushichan044/himo"
-	"github.com/sushichan044/himo/internal/config"
-	"github.com/sushichan044/himo/internal/runner"
-	"github.com/sushichan044/himo/internal/version"
+	"github.com/sushichan044/seil"
+	"github.com/sushichan044/seil/internal/config"
+	"github.com/sushichan044/seil/internal/runner"
+	"github.com/sushichan044/seil/internal/version"
 )
 
 type (
@@ -58,7 +58,7 @@ type PostEditCmd struct {
 }
 
 func (c *PostEditCmd) Run(cli *CLI, cfg *resolvedConfig) error {
-	ws, err := himo.NewWorkspace(cfg)
+	ws, err := seil.NewWorkspace(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to create workspace: %w", err)
 	}
@@ -87,7 +87,7 @@ type SetupCmd struct {
 }
 
 func (c *SetupCmd) Run(cli *CLI, cfg *resolvedConfig) error {
-	ws, err := himo.NewWorkspace(cfg)
+	ws, err := seil.NewWorkspace(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to create workspace: %w", err)
 	}
@@ -116,7 +116,7 @@ type TeardownCmd struct {
 }
 
 func (c *TeardownCmd) Run(cli *CLI, cfg *resolvedConfig) error {
-	ws, err := himo.NewWorkspace(cfg)
+	ws, err := seil.NewWorkspace(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to create workspace: %w", err)
 	}
@@ -235,7 +235,7 @@ func main() {
 	cfg := resolvedConfig{}
 
 	ctx := kong.Parse(&CLI{}, kong.Vars{
-		"version": fmt.Sprintf("himo %s", version.Get()),
+		"version": fmt.Sprintf("seil %s", version.Get()),
 	}, kong.Bind(&cfg))
 	ctx.FatalIfErrorf(ctx.Run())
 }
