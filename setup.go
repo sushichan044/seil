@@ -6,37 +6,20 @@ import (
 	"github.com/spf13/afero"
 
 	"github.com/sushichan044/seil/internal/config"
-	"github.com/sushichan044/seil/internal/runner"
-	"github.com/sushichan044/seil/internal/template"
+	"github.com/sushichan044/seil/internal/run"
 )
 
 func runSetupHooks(
 	ctx context.Context,
 	cfg *config.ResolvedConfig,
 	fs afero.Fs,
-) ([]runner.HookResult, error) {
-	return runSimpleHooks(ctx, cfg.CWD, fs, cfg.Config.Setup.Jobs)
-}
-
-func runSimpleHooks(
-	ctx context.Context,
-	workDir string,
-	fs afero.Fs,
-	jobs []config.SimpleHook,
-) ([]runner.HookResult, error) {
-	toRun := make([]runner.Hook, 0, len(jobs))
-	for _, job := range jobs {
-		cmd, err := template.EvalCommand(job.Run, template.CommandVars{Files: []string{}})
-		if err != nil {
-			return nil, err
-		}
-		toRun = append(toRun, runner.Hook{Name: job.Name, Command: cmd})
+) ([]run.Result, error) {
+	if len(cfg.Config.Setup.Jobs) == 0 {
+		return []run.Result{}, nil
 	}
-
-	if len(toRun) == 0 {
-		return []runner.HookResult{}, nil
+	r, err := run.Prepare(fs, cfg)
+	if err != nil {
+		return nil, err
 	}
-
-	r := &runner.Runner{WorkDir: workDir, Fs: fs}
-	return r.Run(ctx, toRun)
+	return r.RunSetup(ctx)
 }

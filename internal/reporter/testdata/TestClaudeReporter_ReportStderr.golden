@@ -1,7 +1,4 @@
 
 hook: fail
 status: failure
-exit_code: 1
 log: /tmp/fail.log
-summary:
-  boom

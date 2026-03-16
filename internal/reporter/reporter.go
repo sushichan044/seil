@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"github.com/sushichan044/seil/internal/agent"
-	"github.com/sushichan044/seil/internal/runner"
+	"github.com/sushichan044/seil/internal/run"
 )
 
 type Reporter interface {
-	Report(results []runner.HookResult, stdout io.Writer, stderr io.Writer) (int, error)
+	Report(results []run.Result, stdout io.Writer, stderr io.Writer) (int, error)
 }
 
 type Name string
@@ -35,10 +35,10 @@ type HumanReporter struct{}
 
 type JSONReporter struct{}
 
-type groupedHookResults struct {
-	Failure []runner.HookResult `json:"failure"`
-	Success []runner.HookResult `json:"success"`
-	Skipped []runner.HookResult `json:"skipped"`
+type groupedResults struct {
+	Failure []run.Result `json:"failure"`
+	Success []run.Result `json:"success"`
+	Skipped []run.Result `json:"skipped"`
 }
 
 func ParseName(raw string) Name {
@@ -93,14 +93,14 @@ func Resolve(name Name, detectedAgent agent.Agent) Reporter {
 	return HumanReporter{}
 }
 
-func (HumanReporter) Report(results []runner.HookResult, stdout io.Writer, _ io.Writer) (int, error) {
+func (HumanReporter) Report(results []run.Result, stdout io.Writer, _ io.Writer) (int, error) {
 	grouped := groupResults(results)
 
 	if _, err := fmt.Fprintf(stdout, "--- Failures (%d) ---\n", len(grouped.Failure)); err != nil {
 		return 0, err
 	}
 	for _, result := range grouped.Failure {
-		if err := writeHookResult(stdout, result); err != nil {
+		if err := writeResult(stdout, result); err != nil {
 			return 0, err
 		}
 	}
@@ -109,7 +109,7 @@ func (HumanReporter) Report(results []runner.HookResult, stdout io.Writer, _ io.
 		return 0, err
 	}
 	for _, result := range grouped.Success {
-		if err := writeHookResult(stdout, result); err != nil {
+		if err := writeResult(stdout, result); err != nil {
 			return 0, err
 		}
 	}
@@ -118,7 +118,7 @@ func (HumanReporter) Report(results []runner.HookResult, stdout io.Writer, _ io.
 		return 0, err
 	}
 	for _, result := range grouped.Skipped {
-		if err := writeHookResult(stdout, result); err != nil {
+		if err := writeResult(stdout, result); err != nil {
 			return 0, err
 		}
 	}
@@ -129,7 +129,7 @@ func (HumanReporter) Report(results []runner.HookResult, stdout io.Writer, _ io.
 	return defaultExitCode(grouped), nil
 }
 
-func (JSONReporter) Report(results []runner.HookResult, stdout io.Writer, _ io.Writer) (int, error) {
+func (JSONReporter) Report(results []run.Result, stdout io.Writer, _ io.Writer) (int, error) {
 	grouped := groupResults(results)
 	enc := json.NewEncoder(stdout)
 	enc.SetIndent("", "  ")
@@ -139,52 +139,39 @@ func (JSONReporter) Report(results []runner.HookResult, stdout io.Writer, _ io.W
 	return defaultExitCode(grouped), nil
 }
 
-func groupResults(results []runner.HookResult) groupedHookResults {
-	grouped := groupedHookResults{
-		Failure: []runner.HookResult{},
-		Success: []runner.HookResult{},
-		Skipped: []runner.HookResult{},
+func groupResults(results []run.Result) groupedResults {
+	grouped := groupedResults{
+		Failure: []run.Result{},
+		Success: []run.Result{},
+		Skipped: []run.Result{},
 	}
 	for _, result := range results {
 		switch result.Status {
-		case runner.HookStatusFailure:
+		case run.StatusFailure:
 			grouped.Failure = append(grouped.Failure, result)
-		case runner.HookStatusSuccess:
+		case run.StatusSuccess:
 			grouped.Success = append(grouped.Success, result)
-		case runner.HookStatusSkipped:
+		case run.StatusSkipped:
 			grouped.Skipped = append(grouped.Skipped, result)
 		}
 	}
 	return grouped
 }
 
-func writeHookResult(w io.Writer, result runner.HookResult) error {
-	if _, err := fmt.Fprintf(w, "\nhook: %s\nstatus: %s\nexit_code: %d\nlog: %s\n",
-		result.Name, result.Status, result.ExitCode, result.LogPath); err != nil {
-		return err
-	}
-	if result.Summary == "" {
-		return nil
-	}
-	if _, err := fmt.Fprintln(w, "summary:"); err != nil {
-		return err
-	}
-	for line := range strings.SplitSeq(result.Summary, "\n") {
-		if _, err := fmt.Fprintf(w, "  %s\n", line); err != nil {
-			return err
-		}
-	}
-	return nil
+func writeResult(w io.Writer, result run.Result) error {
+	_, err := fmt.Fprintf(w, "\nhook: %s\nstatus: %s\nlog: %s\n",
+		result.Name, result.Status, result.LogFile)
+	return err
 }
 
-func defaultExitCode(grouped groupedHookResults) int {
+func defaultExitCode(grouped groupedResults) int {
 	if len(grouped.Failure) > 0 {
 		return 1
 	}
 	return 0
 }
 
-func summaryLine(grouped groupedHookResults) string {
+func summaryLine(grouped groupedResults) string {
 	return fmt.Sprintf("%d succeeded, %d failed, %d skipped",
 		len(grouped.Success), len(grouped.Failure), len(grouped.Skipped))
 }

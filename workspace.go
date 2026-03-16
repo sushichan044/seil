@@ -7,7 +7,7 @@ import (
 
 	"github.com/sushichan044/seil/internal/config"
 	"github.com/sushichan044/seil/internal/gitignore"
-	"github.com/sushichan044/seil/internal/runner"
+	"github.com/sushichan044/seil/internal/run"
 )
 
 // Workspace provides the public API for seil operations.
@@ -22,8 +22,8 @@ func NewWorkspace(cfg *config.ResolvedConfig) (*Workspace, error) {
 }
 
 // RunPostEditHooks executes all post-edit hooks for the given file path.
-func (w *Workspace) RunPostEditHooks(ctx context.Context, filePath string) ([]runner.HookResult, error) {
-	m, err := gitignore.NewMatcherFromRoot(w.fs, w.config.CWD)
+func (w *Workspace) RunPostEditHooks(ctx context.Context, filePath string) ([]run.Result, error) {
+	m, err := gitignore.NewMatcherFromRoot(w.fs, w.config.CWD())
 	if err != nil {
 		return nil, err
 	}
@@ -31,11 +31,11 @@ func (w *Workspace) RunPostEditHooks(ctx context.Context, filePath string) ([]ru
 }
 
 // RunSetupHooks executes all setup hooks.
-func (w *Workspace) RunSetupHooks(ctx context.Context) ([]runner.HookResult, error) {
+func (w *Workspace) RunSetupHooks(ctx context.Context) ([]run.Result, error) {
 	return runSetupHooks(ctx, w.config, w.fs)
 }
 
 // RunTeardownHooks executes all teardown hooks.
-func (w *Workspace) RunTeardownHooks(ctx context.Context) ([]runner.HookResult, error) {
+func (w *Workspace) RunTeardownHooks(ctx context.Context) ([]run.Result, error) {
 	return runTeardownHooks(ctx, w.config, w.fs)
 }

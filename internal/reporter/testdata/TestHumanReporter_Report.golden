@@ -2,25 +2,18 @@
 
 hook: fail
 status: failure
-exit_code: 1
 log: /tmp/fail.log
-summary:
-  boom
 
 --- Successes (1) ---
 
 hook: ok
 status: success
-exit_code: 0
 log: /tmp/ok.log
-summary:
-  hello
 
 --- Skipped (1) ---
 
 hook: skip
 status: skipped
-exit_code: 0
 log: 
 
 ---

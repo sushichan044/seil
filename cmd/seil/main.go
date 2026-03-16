@@ -4,15 +4,17 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/alecthomas/kong"
+	"github.com/spf13/afero"
 
 	"github.com/sushichan044/seil"
 	"github.com/sushichan044/seil/internal/agent"
 	"github.com/sushichan044/seil/internal/config"
 	"github.com/sushichan044/seil/internal/reporter"
-	"github.com/sushichan044/seil/internal/runner"
+	"github.com/sushichan044/seil/internal/run"
 	"github.com/sushichan044/seil/internal/version"
 )
 
@@ -33,19 +35,22 @@ type (
 
 func (cli *CLI) AfterApply(r *resolvedConfig) error {
 	cfgPath := string(cli.Config)
+	fs := afero.NewOsFs()
 
 	if cfgPath == "" {
 		wd, err := os.Getwd()
 		if err != nil {
 			return err
 		}
-		cfgPath, err = config.ResolveConfigFilePathFrom(wd)
+		// FindConfigFile starts from filepath.Dir(fromPath), so pass a dummy
+		// file inside wd so that wd itself is searched first.
+		cfgPath, err = config.FindConfigFile(fs, filepath.Join(wd, "dummy"))
 		if err != nil {
 			return fmt.Errorf("failed to resolve config file path: %w", err)
 		}
 	}
 
-	cfg, err := config.Load(cfgPath)
+	cfg, err := config.Load(fs, cfgPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -103,7 +108,7 @@ func (c *TeardownCmd) Run(cli *CLI, cfg *resolvedConfig) error {
 	return reportResults(results, cli.Reporter)
 }
 
-func reportResults(results []runner.HookResult, name reporter.Name) error {
+func reportResults(results []run.Result, name reporter.Name) error {
 	r := reporter.Resolve(name, agent.Detect())
 	exitCode, err := r.Report(results, os.Stdout, os.Stderr)
 	if err != nil {

@@ -2,6 +2,7 @@ package reporter_test
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -11,13 +12,13 @@ import (
 
 	"github.com/sushichan044/seil/internal/agent"
 	"github.com/sushichan044/seil/internal/reporter"
-	"github.com/sushichan044/seil/internal/runner"
+	"github.com/sushichan044/seil/internal/run"
 )
 
 type groupedResultsJSON struct {
-	Failure []runner.HookResult `json:"failure"`
-	Success []runner.HookResult `json:"success"`
-	Skipped []runner.HookResult `json:"skipped"`
+	Failure []run.Result `json:"failure"`
+	Success []run.Result `json:"success"`
+	Skipped []run.Result `json:"skipped"`
 }
 
 func TestResolveReporter(t *testing.T) {
@@ -58,10 +59,10 @@ func TestJSONReporter_Report(t *testing.T) {
 	require.Len(t, grouped.Failure, 1)
 }
 
-func sampleResults() []runner.HookResult {
-	return []runner.HookResult{
-		{Name: "ok", Status: runner.HookStatusSuccess, ExitCode: 0, LogPath: "/tmp/ok.log", Summary: "hello"},
-		{Name: "fail", Status: runner.HookStatusFailure, ExitCode: 1, LogPath: "/tmp/fail.log", Summary: "boom"},
-		{Name: "skip", Status: runner.HookStatusSkipped},
+func sampleResults() []run.Result {
+	return []run.Result{
+		run.Success("ok", "/tmp/ok.log"),
+		run.Failure("fail", "/tmp/fail.log", errors.New("exit status 1")),
+		run.Skipped("skip"),
 	}
 }

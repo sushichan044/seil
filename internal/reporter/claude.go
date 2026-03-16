@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/sushichan044/seil/internal/runner"
+	"github.com/sushichan044/seil/internal/run"
 )
 
 type ClaudeReporter struct{}
 
 const claudeFailureExitCode = 2
 
-func (ClaudeReporter) Report(results []runner.HookResult, stdout io.Writer, stderr io.Writer) (int, error) {
+func (ClaudeReporter) Report(results []run.Result, stdout io.Writer, stderr io.Writer) (int, error) {
 	grouped := groupResults(results)
 	for _, result := range grouped.Failure {
-		if err := writeHookResult(stderr, result); err != nil {
+		if err := writeResult(stderr, result); err != nil {
 			return 0, err
 		}
 	}
@@ -24,7 +24,7 @@ func (ClaudeReporter) Report(results []runner.HookResult, stdout io.Writer, stde
 	return claudeExitCode(grouped), nil
 }
 
-func claudeExitCode(grouped groupedHookResults) int {
+func claudeExitCode(grouped groupedResults) int {
 	if len(grouped.Failure) > 0 {
 		return claudeFailureExitCode
 	}

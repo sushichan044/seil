@@ -105,11 +105,9 @@ func filteredEnv(environ []string) []string {
 }
 
 type hookResultJSON struct {
-	Name     string `json:"name"`
-	Status   string `json:"status"`
-	ExitCode int    `json:"exit_code"`
-	LogPath  string `json:"log_path"`
-	Summary  string `json:"summary"`
+	Name    string `json:"name"`
+	Status  string `json:"status"`
+	LogFile string `json:"log_file"`
 }
 
 type groupedResultsJSON struct {
@@ -177,9 +175,7 @@ func TestPostEdit_JSON_Schema(t *testing.T) {
 
 	assert.Equal(t, "greet", results.Success[0].Name)
 	assert.Equal(t, "success", results.Success[0].Status)
-	assert.Equal(t, 0, results.Success[0].ExitCode)
-	assert.NotEmpty(t, results.Success[0].LogPath)
-	assert.Equal(t, "hello", results.Success[0].Summary)
+	assert.NotEmpty(t, results.Success[0].LogFile)
 }
 
 // TestPostEdit_TextFormat_IsDefault verifies that auto reporter uses human-readable text by default.
@@ -242,8 +238,6 @@ func TestSetup_JSON_Schema(t *testing.T) {
 
 	assert.Equal(t, "greet", results.Success[0].Name)
 	assert.Equal(t, "success", results.Success[0].Status)
-	assert.Equal(t, 0, results.Success[0].ExitCode)
-	assert.Equal(t, "hello", results.Success[0].Summary)
 }
 
 // TestTeardown_JSON_Schema verifies that teardown with --reporter json outputs a valid JSON array.
@@ -264,8 +258,6 @@ func TestTeardown_JSON_Schema(t *testing.T) {
 
 	assert.Equal(t, "cleanup", results.Success[0].Name)
 	assert.Equal(t, "success", results.Success[0].Status)
-	assert.Equal(t, 0, results.Success[0].ExitCode)
-	assert.Equal(t, "cleaned", results.Success[0].Summary)
 }
 
 // TestSetup_TextFormat_IsDefault verifies that setup without --reporter uses human-readable text.
