@@ -46,3 +46,26 @@ func TestJob_PathSafeName(t *testing.T) {
 		assert.Equal(t, "abc_123-foo.bar", job.PathSafeName())
 	})
 }
+
+func TestGlobJob_Matches(t *testing.T) {
+	t.Run("returns true when glob is empty (always run)", func(t *testing.T) {
+		job := config.GlobJob{Glob: ""}
+		assert.True(t, job.Matches("main.go", "/project"))
+	})
+
+	t.Run("returns true when file matches glob pattern", func(t *testing.T) {
+		job := config.GlobJob{Glob: "**/*.go"}
+		assert.True(t, job.Matches("/project/main.go", "/project"))
+	})
+
+	t.Run("returns false when file does not match glob pattern", func(t *testing.T) {
+		job := config.GlobJob{Glob: "**/*.ts"}
+		assert.False(t, job.Matches("/project/main.go", "/project"))
+	})
+
+	t.Run("matches relative to configRoot", func(t *testing.T) {
+		job := config.GlobJob{Glob: "src/**/*.go"}
+		assert.True(t, job.Matches("/project/src/foo/bar.go", "/project"))
+		assert.False(t, job.Matches("/project/main.go", "/project"))
+	})
+}

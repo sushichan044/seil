@@ -1,9 +1,11 @@
 package config
 
 import (
+	"path/filepath"
 	"regexp"
 
 	z "github.com/Oudwins/zog"
+	"github.com/bmatcuk/doublestar/v4"
 )
 
 type Job struct {
@@ -54,4 +56,20 @@ func (job *Job) displayableRun() string {
 		return "<no command>"
 	}
 	return job.Run
+}
+
+// Matches reports whether this job should run for the given filePath.
+// filePath and configRoot should both be absolute paths.
+// If Glob is empty, the job always matches.
+func (j *GlobJob) Matches(filePath, configRoot string) bool {
+	if j.Glob == "" {
+		return true
+	}
+	rel, err := filepath.Rel(configRoot, filePath)
+	if err != nil {
+		rel = filePath
+	}
+	normalized := filepath.ToSlash(rel)
+	matched, err := doublestar.Match(j.Glob, normalized)
+	return err == nil && matched
 }
