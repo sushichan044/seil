@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/alecthomas/kong"
@@ -42,10 +42,12 @@ func (cli *CLI) AfterApply(r *resolvedConfig) error {
 		if err != nil {
 			return err
 		}
-		// FindConfigFile starts from filepath.Dir(fromPath), so pass a dummy
-		// file inside wd so that wd itself is searched first.
-		cfgPath, err = config.FindConfigFile(fs, filepath.Join(wd, "dummy"))
+		cfgPath, err = config.FindConfigFile(fs, wd)
 		if err != nil {
+			if errors.Is(err, config.ErrConfigNotFound) {
+				*r = *config.NewEmpty(wd)
+				return nil
+			}
 			return fmt.Errorf("failed to resolve config file path: %w", err)
 		}
 	}

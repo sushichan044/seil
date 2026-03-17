@@ -177,4 +177,15 @@ post_edit:
 		require.Len(t, results, 1)
 		assert.Equal(t, run.StatusSuccess, results[0].Status)
 	})
+
+	t.Run("no-op when config is empty", func(t *testing.T) {
+		repoDir := t.TempDir()
+		cfg := config.NewEmpty(repoDir)
+		ws, err := seil.NewWorkspace(cfg)
+		require.NoError(t, err)
+
+		results, err := ws.RunPostEditHooks(context.Background(), "main.go")
+		require.NoError(t, err)
+		assert.Empty(t, results)
+	})
 }

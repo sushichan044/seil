@@ -53,7 +53,7 @@ func (r *JobRunner) runJobs(ctx context.Context, jobs []config.Job) []Result {
 			defer logFile.Close()
 
 			proc := exec.CommandContext(ctx, "sh", "-c", cmd)
-			proc.Dir = r.cfg.CWD()
+			proc.Dir = r.cfg.RootDir()
 			proc.Stdout = logFile
 			proc.Stderr = logFile
 
@@ -97,7 +97,7 @@ func (r *JobRunner) RunPostEdit(ctx context.Context, filePath string, jobs []con
 			defer logFile.Close()
 
 			proc := exec.CommandContext(ctx, "sh", "-c", cmd)
-			proc.Dir = r.cfg.CWD()
+			proc.Dir = r.cfg.RootDir()
 			proc.Stdout = logFile
 			proc.Stderr = logFile
 

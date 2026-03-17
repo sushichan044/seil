@@ -320,6 +320,72 @@ func TestConfig_AutoDiscovery(t *testing.T) {
 	assert.Equal(t, "fmt", results.Success[0].Name)
 }
 
+func TestPostEdit_AutoDiscovery_MissingConfig_IsNoOpForJSONReporter(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	targetFile := filepath.Join(tmpDir, "main.go")
+	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
+	require.NoError(t, err)
+
+	result := runSeil(t, tmpDir, "--reporter", "json", "post-edit", targetFile)
+
+	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
+	assert.Empty(t, result.Stderr)
+
+	var results groupedResultsJSON
+	err = json.Unmarshal([]byte(result.Stdout), &results)
+	require.NoError(t, err, "stdout should be valid JSON: %s", result.Stdout)
+	assert.Empty(t, results.Failure)
+	assert.Empty(t, results.Success)
+	assert.Empty(t, results.Skipped)
+}
+
+func TestSetup_AutoDiscovery_MissingConfig_IsNoOp(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	result := runSeil(t, tmpDir, "setup")
+
+	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
+	assert.Empty(t, result.Stderr)
+	assert.Contains(t, result.Stdout, "0 succeeded, 0 failed, 0 skipped")
+}
+
+func TestTeardown_AutoDiscovery_MissingConfig_IsNoOp(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	result := runSeil(t, tmpDir, "teardown")
+
+	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
+	assert.Empty(t, result.Stderr)
+	assert.Contains(t, result.Stdout, "0 succeeded, 0 failed, 0 skipped")
+}
+
+func TestPostEdit_AutoDiscovery_MissingConfig_IsNoOpForClaudeReporter(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	targetFile := filepath.Join(tmpDir, "main.go")
+	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
+	require.NoError(t, err)
+
+	result := runSeilWithEnv(t, tmpDir, map[string]string{
+		"AI_AGENT": "claude",
+	}, "post-edit", targetFile)
+
+	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
+	assert.Empty(t, result.Stderr)
+	assert.Equal(t, "0 succeeded, 0 failed, 0 skipped\n", result.Stdout)
+}
+
+func TestConfig_ExplicitMissingPath_Fails(t *testing.T) {
+	tmpDir := t.TempDir()
+	missingCfgPath := filepath.Join(tmpDir, "missing.yml")
+
+	result := runSeil(t, tmpDir, "-c", missingCfgPath, "setup")
+
+	assert.NotEqual(t, 0, result.ExitCode)
+	assert.Contains(t, result.Stderr, "missing.yml")
+}
+
 // TestPostEdit_JSON_Failure_ExitCode verifies that reporter json exits with code 1 when a hook fails.
 func TestPostEdit_JSON_Failure_ExitCode(t *testing.T) {
 	tmpDir := t.TempDir()

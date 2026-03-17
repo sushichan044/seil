@@ -23,7 +23,7 @@ func runPostEditHooks(
 	var toRunIdx []int
 
 	for i, job := range jobs {
-		if !job.Matches(filePath, cfg.CWD()) || gitignoreMatcher.IsIgnored(filePath) {
+		if !job.Matches(filePath, cfg.RootDir()) || gitignoreMatcher.IsIgnored(filePath) {
 			results[i] = run.Skipped(job.DisplayName())
 			continue
 		}
