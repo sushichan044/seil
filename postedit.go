@@ -2,7 +2,6 @@ package seil
 
 import (
 	"context"
-	"path/filepath"
 
 	"github.com/spf13/afero"
 
@@ -16,20 +15,15 @@ func runPostEditHooks(
 	cfg *config.ResolvedConfig,
 	gitignoreMatcher *gitignore.Matcher,
 	fs afero.Fs,
-	filePath string,
+	wsPath config.WorkspacePath,
 ) ([]run.Result, error) {
 	jobs := cfg.Config.PostEdit.Jobs
 	results := make([]run.Result, len(jobs))
 	var toRun []config.GlobJob
 	var toRunIdx []int
 
-	relPath, relErr := filepath.Rel(cfg.RootDir(), filePath)
-	if relErr != nil {
-		return nil, relErr
-	}
-
 	for i, job := range jobs {
-		if !job.Matches(filePath, cfg.RootDir()) || gitignoreMatcher.IsIgnored(relPath) {
+		if !job.Matches(wsPath) || gitignoreMatcher.IsIgnored(wsPath.Rel()) {
 			results[i] = run.Skipped(job.DisplayName())
 			continue
 		}
@@ -46,7 +40,7 @@ func runPostEditHooks(
 		return nil, err
 	}
 
-	runResults, err := r.RunPostEdit(ctx, filePath, toRun)
+	runResults, err := r.RunPostEdit(ctx, wsPath, toRun)
 	if err != nil {
 		return nil, err
 	}

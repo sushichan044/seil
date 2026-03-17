@@ -146,7 +146,7 @@ post_edit:
 		require.NoError(t, err)
 
 		jobs := cfg.Config.PostEdit.Jobs
-		results, err := r.RunPostEdit(context.Background(), "main.go", jobs)
+		results, err := r.RunPostEdit(context.Background(), config.NewWorkspacePath(repoDir, "main.go"), jobs)
 		require.NoError(t, err)
 		require.Len(t, results, 1)
 		assert.Equal(t, "fmt", results[0].Name)
@@ -166,7 +166,7 @@ post_edit:
 		require.NoError(t, err)
 
 		jobs := cfg.Config.PostEdit.Jobs
-		results, err := r.RunPostEdit(context.Background(), "main.go", jobs)
+		results, err := r.RunPostEdit(context.Background(), config.NewWorkspacePath(repoDir, "main.go"), jobs)
 		require.NoError(t, err)
 		require.Len(t, results, 1)
 		assert.Equal(t, run.StatusSuccess, results[0].Status)
@@ -185,7 +185,7 @@ post_edit:
 		require.NoError(t, err)
 
 		jobs := cfg.Config.PostEdit.Jobs
-		results, err := r.RunPostEdit(context.Background(), "main.go", jobs)
+		results, err := r.RunPostEdit(context.Background(), config.NewWorkspacePath(repoDir, "main.go"), jobs)
 		require.NoError(t, err)
 		require.Len(t, results, 1)
 		assert.Equal(t, run.StatusFailure, results[0].Status)

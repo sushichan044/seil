@@ -76,16 +76,13 @@ func (r *JobRunner) RunTeardown(ctx context.Context) ([]Result, error) {
 	return r.runJobs(ctx, r.cfg.Config.Teardown.Jobs), nil
 }
 
-// RunPostEdit executes the given pre-filtered jobs for the edited file at filePath.
+// RunPostEdit executes the given pre-filtered jobs for the edited file.
 // Callers are responsible for filtering jobs (via GlobJob.Matches + gitignore) before calling.
-func (r *JobRunner) RunPostEdit(ctx context.Context, filePath string, jobs []config.GlobJob) ([]Result, error) {
+func (r *JobRunner) RunPostEdit(ctx context.Context, wsPath config.WorkspacePath, jobs []config.GlobJob) ([]Result, error) {
 	results := make([]Result, len(jobs))
 	var wg sync.WaitGroup
 
-	relFile, relErr := filepath.Rel(r.cfg.RootDir(), filePath)
-	if relErr != nil {
-		return nil, relErr
-	}
+	relFile := wsPath.Rel()
 
 	for i, job := range jobs {
 		wg.Go(func() {
