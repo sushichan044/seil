@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/afero"
 )
 
-const defaultConfigFileName = "seil.yml"
+const defaultConfigFileName = ".seil.yml"
 
 func Load(fs afero.Fs, path string) (*ResolvedConfig, error) {
 	configPath, err := filepath.Abs(path)

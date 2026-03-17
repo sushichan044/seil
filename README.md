@@ -2,7 +2,7 @@
 
 `seil` is a tool for managing lifecycle hooks across AI-native development workflows.
 
-It lets you define setup, teardown, and post-edit automation once in `seil.yml` and reuse it across integrations.
+It lets you define setup, teardown, and post-edit automation once in `.seil.yml` and reuse it across integrations.
 
 ## Installation
 
@@ -52,7 +52,7 @@ You can route file edit events through `seil post-edit` instead of embedding for
 }
 ```
 
-This keeps Claude Code responsible for detecting edits, while `seil.yml` owns what should happen after the edit.
+This keeps Claude Code responsible for detecting edits, while `.seil.yml` owns what should happen after the edit.
 
 ### Git Worktree Management (e.g. with `k1low/git-wt`)
 
@@ -71,7 +71,7 @@ This works well when a worktree should run initialization on create and cleanup 
 
 ### Minimal config
 
-Create `seil.yml` in your repository:
+Create `.seil.yml` in your repository:
 
 ```yaml
 setup:
@@ -118,11 +118,12 @@ The JSON result is grouped into `failure`, `success`, and `skipped`.
 
 ### File location
 
-`seil` uses `seil.yml`.
+`seil` uses `.seil.yml`.
 
 - If `-c, --config <path>` is provided, that file is used.
 - Otherwise, `seil` searches from the current directory upward until the filesystem root.
-- If `seil.yml` is not found, loading fails.
+- If `.seil.yml` is not found, loading fails.
+- To use a different filename such as `seil.yml`, pass it with `-c, --config`.
 
 ### Schema
 
@@ -147,13 +148,13 @@ teardown:
 ### Notes
 
 - `run` is executed through `sh -c`.
-- Hook commands run with the directory containing `seil.yml` as their working directory.
+- Hook commands run with the directory containing `.seil.yml` as their working directory.
 - `name` is optional. If omitted, `seil` derives a normalized name from `run`.
 - `post_edit.jobs[].glob` uses doublestar matching such as `**/*.go`.
 - `post-edit` receives the edited file path and makes it available to command templating.
 
 > [!NOTE]
-> `run` commands use the directory containing the loaded `seil.yml` as `cwd`.
+> `run` commands use the directory containing the loaded `.seil.yml` as `cwd`.
 > This is true both when `seil` finds the config automatically and when you pass it with `-c`.
 
 ## Behavior
