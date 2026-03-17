@@ -44,7 +44,7 @@ func (r *JobRunner) runJobs(ctx context.Context, jobs []config.Job) []Result {
 
 	for i, job := range jobs {
 		wg.Go(func() {
-			cmd, err := EvalJob(job.Run, Vars{})
+			cmd, err := EvalJob(job.Run, JobEvaluationParams{})
 			if err != nil {
 				results[i] = Failure(job.DisplayName(), "", err)
 				return
@@ -90,11 +90,9 @@ func (r *JobRunner) RunPostEdit(
 	results := make([]Result, len(jobs))
 	var wg sync.WaitGroup
 
-	relFile := wsPath.Rel()
-
 	for i, job := range jobs {
 		wg.Go(func() {
-			cmd, err := EvalJob(job.Run, Vars{File: relFile})
+			cmd, err := EvalJob(job.Run, JobEvaluationParams{Filepath: wsPath})
 			if err != nil {
 				results[i] = Failure(job.DisplayName(), "", err)
 				return

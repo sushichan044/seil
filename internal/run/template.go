@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/sushichan044/seil/internal/config"
 )
 
 //nolint:gochecknoglobals // funcMap is a static map of template functions
@@ -13,19 +15,27 @@ var funcMap = template.FuncMap{
 	"ext":  filepath.Ext,
 }
 
-// Vars holds template variables available during hook command evaluation.
-type Vars struct {
+// vars holds template variables available during hook command evaluation.
+type vars struct {
 	File string
 }
 
-// EvalJob evaluates a Go template string with the given Vars.
-func EvalJob(tmpl string, vars Vars) (string, error) {
+type JobEvaluationParams struct {
+	Filepath config.WorkspacePath
+}
+
+// EvalJob evaluates a Go template string with the given JobEvaluationParams.
+func EvalJob(tmpl string, params JobEvaluationParams) (string, error) {
+	v := vars{
+		File: params.Filepath.Rel(),
+	}
+
 	t, err := template.New("").Funcs(funcMap).Parse(tmpl)
 	if err != nil {
 		return "", err
 	}
 	var sb strings.Builder
-	if err = t.Execute(&sb, vars); err != nil {
+	if err = t.Execute(&sb, v); err != nil {
 		return "", err
 	}
 	return sb.String(), nil
