@@ -116,7 +116,7 @@ type groupedResultsJSON struct {
 	Skipped []hookResultJSON `json:"skipped"`
 }
 
-func writeSeilYML(t *testing.T, dir, hookName, command string) {
+func writeConfigYML(t *testing.T, dir, fileName, hookName, command string) {
 	t.Helper()
 	content := fmt.Sprintf(`
 post_edit:
@@ -125,11 +125,21 @@ post_edit:
       glob: '**/*.go'
       run: '%s'
 `, hookName, command)
-	err := os.WriteFile(filepath.Join(dir, "seil.yml"), []byte(content), 0o644)
+	err := os.WriteFile(filepath.Join(dir, fileName), []byte(content), 0o644)
 	require.NoError(t, err)
 }
 
-func writeSetupSeilYML(t *testing.T, dir, hookName, command string) {
+func writeDefaultConfigYML(t *testing.T, dir, hookName, command string) {
+	t.Helper()
+	writeConfigYML(t, dir, ".seil.yml", hookName, command)
+}
+
+func writeLegacyConfigYML(t *testing.T, dir, hookName, command string) {
+	t.Helper()
+	writeConfigYML(t, dir, "seil.yml", hookName, command)
+}
+
+func writeSetupConfigYML(t *testing.T, dir, fileName, hookName, command string) {
 	t.Helper()
 	content := fmt.Sprintf(`
 setup:
@@ -137,11 +147,16 @@ setup:
     - name: %s
       run: '%s'
 `, hookName, command)
-	err := os.WriteFile(filepath.Join(dir, "seil.yml"), []byte(content), 0o644)
+	err := os.WriteFile(filepath.Join(dir, fileName), []byte(content), 0o644)
 	require.NoError(t, err)
 }
 
-func writeTeardownSeilYML(t *testing.T, dir, hookName, command string) {
+func writeDefaultSetupConfigYML(t *testing.T, dir, hookName, command string) {
+	t.Helper()
+	writeSetupConfigYML(t, dir, ".seil.yml", hookName, command)
+}
+
+func writeTeardownConfigYML(t *testing.T, dir, fileName, hookName, command string) {
 	t.Helper()
 	content := fmt.Sprintf(`
 teardown:
@@ -149,21 +164,26 @@ teardown:
     - name: %s
       run: '%s'
 `, hookName, command)
-	err := os.WriteFile(filepath.Join(dir, "seil.yml"), []byte(content), 0o644)
+	err := os.WriteFile(filepath.Join(dir, fileName), []byte(content), 0o644)
 	require.NoError(t, err)
+}
+
+func writeDefaultTeardownConfigYML(t *testing.T, dir, hookName, command string) {
+	t.Helper()
+	writeTeardownConfigYML(t, dir, ".seil.yml", hookName, command)
 }
 
 // TestPostEdit_JSON_Schema verifies that --reporter json outputs a valid JSON array with the correct schema.
 func TestPostEdit_JSON_Schema(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeSeilYML(t, tmpDir, "greet", "echo hello")
+	writeDefaultConfigYML(t, tmpDir, "greet", "echo hello")
 
 	targetFile := filepath.Join(tmpDir, "main.go")
 	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
-	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	cfgPath := filepath.Join(tmpDir, ".seil.yml")
 	result := runSeil(t, "", "-c", cfgPath, "--reporter", "json", "post-edit", targetFile)
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
@@ -182,13 +202,13 @@ func TestPostEdit_JSON_Schema(t *testing.T) {
 func TestPostEdit_TextFormat_IsDefault(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeSeilYML(t, tmpDir, "greet", "echo hello")
+	writeDefaultConfigYML(t, tmpDir, "greet", "echo hello")
 
 	targetFile := filepath.Join(tmpDir, "main.go")
 	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
-	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	cfgPath := filepath.Join(tmpDir, ".seil.yml")
 	result := runSeil(t, "", "-c", cfgPath, "post-edit", targetFile)
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
@@ -201,7 +221,7 @@ func TestConfig_ExplicitPath(t *testing.T) {
 	configDir := t.TempDir()
 	workDir := t.TempDir()
 
-	writeSeilYML(t, configDir, "lint", "echo linted")
+	writeLegacyConfigYML(t, configDir, "lint", "echo linted")
 
 	targetFile := filepath.Join(workDir, "app.go")
 	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
@@ -224,9 +244,9 @@ func TestConfig_ExplicitPath(t *testing.T) {
 func TestSetup_JSON_Schema(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeSetupSeilYML(t, tmpDir, "greet", "echo hello")
+	writeDefaultSetupConfigYML(t, tmpDir, "greet", "echo hello")
 
-	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	cfgPath := filepath.Join(tmpDir, ".seil.yml")
 	result := runSeil(t, "", "-c", cfgPath, "--reporter", "json", "setup")
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
@@ -244,9 +264,9 @@ func TestSetup_JSON_Schema(t *testing.T) {
 func TestTeardown_JSON_Schema(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeTeardownSeilYML(t, tmpDir, "cleanup", "echo cleaned")
+	writeDefaultTeardownConfigYML(t, tmpDir, "cleanup", "echo cleaned")
 
-	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	cfgPath := filepath.Join(tmpDir, ".seil.yml")
 	result := runSeil(t, "", "-c", cfgPath, "--reporter", "json", "teardown")
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
@@ -264,9 +284,9 @@ func TestTeardown_JSON_Schema(t *testing.T) {
 func TestSetup_TextFormat_IsDefault(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeSetupSeilYML(t, tmpDir, "greet", "echo hello")
+	writeDefaultSetupConfigYML(t, tmpDir, "greet", "echo hello")
 
-	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	cfgPath := filepath.Join(tmpDir, ".seil.yml")
 	result := runSeil(t, "", "-c", cfgPath, "setup")
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
@@ -282,7 +302,7 @@ func TestConfig_AutoDiscovery(t *testing.T) {
 	err := os.Mkdir(filepath.Join(tmpDir, ".git"), 0o755)
 	require.NoError(t, err)
 
-	writeSeilYML(t, tmpDir, "fmt", "echo formatted")
+	writeDefaultConfigYML(t, tmpDir, "fmt", "echo formatted")
 
 	targetFile := filepath.Join(tmpDir, "main.go")
 	err = os.WriteFile(targetFile, []byte("package main\n"), 0o644)
@@ -304,13 +324,13 @@ func TestConfig_AutoDiscovery(t *testing.T) {
 func TestPostEdit_JSON_Failure_ExitCode(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeSeilYML(t, tmpDir, "error", "exit 1")
+	writeDefaultConfigYML(t, tmpDir, "error", "exit 1")
 
 	targetFile := filepath.Join(tmpDir, "main.go")
 	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
-	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	cfgPath := filepath.Join(tmpDir, ".seil.yml")
 	result := runSeil(t, "", "-c", cfgPath, "--reporter", "json", "post-edit", targetFile)
 
 	assert.Equal(t, 1, result.ExitCode)
@@ -327,13 +347,13 @@ func TestPostEdit_JSON_Failure_ExitCode(t *testing.T) {
 func TestPostEdit_AIClaude_UsesClaudeReporter(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeSeilYML(t, tmpDir, "error", "echo boom && exit 1")
+	writeDefaultConfigYML(t, tmpDir, "error", "echo boom && exit 1")
 
 	targetFile := filepath.Join(tmpDir, "main.go")
 	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
-	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	cfgPath := filepath.Join(tmpDir, ".seil.yml")
 	result := runSeilWithEnv(t, "", map[string]string{
 		"AI_AGENT": "claude",
 	}, "-c", cfgPath, "post-edit", targetFile)
@@ -347,9 +367,9 @@ func TestPostEdit_AIClaude_UsesClaudeReporter(t *testing.T) {
 func TestSetup_AIClaude_UsesSameReporterSelection(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeSetupSeilYML(t, tmpDir, "error", "echo boom && exit 1")
+	writeDefaultSetupConfigYML(t, tmpDir, "error", "echo boom && exit 1")
 
-	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	cfgPath := filepath.Join(tmpDir, ".seil.yml")
 	result := runSeilWithEnv(t, "", map[string]string{
 		"AI_AGENT": "claude",
 	}, "-c", cfgPath, "setup")
@@ -362,13 +382,13 @@ func TestSetup_AIClaude_UsesSameReporterSelection(t *testing.T) {
 func TestPostEdit_ExplicitJSONReporterOverridesClaudeAutoSelection(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeSeilYML(t, tmpDir, "error", "exit 1")
+	writeDefaultConfigYML(t, tmpDir, "error", "exit 1")
 
 	targetFile := filepath.Join(tmpDir, "main.go")
 	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
-	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	cfgPath := filepath.Join(tmpDir, ".seil.yml")
 	result := runSeilWithEnv(t, "", map[string]string{
 		"AI_AGENT": "claude",
 	}, "-c", cfgPath, "--reporter", "json", "post-edit", targetFile)
@@ -385,13 +405,13 @@ func TestPostEdit_ExplicitJSONReporterOverridesClaudeAutoSelection(t *testing.T)
 func TestExplicitClaudeReporterForcesClaudeBehavior(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeSeilYML(t, tmpDir, "error", "echo boom && exit 1")
+	writeDefaultConfigYML(t, tmpDir, "error", "echo boom && exit 1")
 
 	targetFile := filepath.Join(tmpDir, "main.go")
 	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
-	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	cfgPath := filepath.Join(tmpDir, ".seil.yml")
 	result := runSeil(t, "", "-c", cfgPath, "--reporter", "claude", "post-edit", targetFile)
 
 	assert.Equal(t, 2, result.ExitCode)
@@ -402,9 +422,9 @@ func TestExplicitClaudeReporterForcesClaudeBehavior(t *testing.T) {
 func TestInvalidReporterFailsParsing(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeSetupSeilYML(t, tmpDir, "greet", "echo hello")
+	writeDefaultSetupConfigYML(t, tmpDir, "greet", "echo hello")
 
-	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	cfgPath := filepath.Join(tmpDir, ".seil.yml")
 	result := runSeil(t, "", "-c", cfgPath, "--reporter", "wat", "setup")
 
 	assert.NotEqual(t, 0, result.ExitCode)
@@ -414,13 +434,13 @@ func TestInvalidReporterFailsParsing(t *testing.T) {
 func TestAIAgent_OverridesAutoDetectedAgent(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	writeSeilYML(t, tmpDir, "error", "echo boom && exit 1")
+	writeDefaultConfigYML(t, tmpDir, "error", "echo boom && exit 1")
 
 	targetFile := filepath.Join(tmpDir, "main.go")
 	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
-	cfgPath := filepath.Join(tmpDir, "seil.yml")
+	cfgPath := filepath.Join(tmpDir, ".seil.yml")
 	result := runSeilWithEnv(t, "", map[string]string{
 		"AI_AGENT":        "claude",
 		"CODEX_THREAD_ID": "thread-1",

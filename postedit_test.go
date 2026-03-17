@@ -17,7 +17,7 @@ import (
 
 func loadCfg(t *testing.T, repoDir, yaml string) *config.ResolvedConfig {
 	t.Helper()
-	cfgPath := filepath.Join(repoDir, "seil.yml")
+	cfgPath := filepath.Join(repoDir, ".seil.yml")
 	require.NoError(t, os.WriteFile(cfgPath, []byte(yaml), 0o600))
 	cfg, err := config.Load(afero.NewOsFs(), cfgPath)
 	require.NoError(t, err)

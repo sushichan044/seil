@@ -13,7 +13,7 @@ import (
 func TestLoad(t *testing.T) {
 	t.Run("loads valid config file and resolves CWD", func(t *testing.T) {
 		fs := afero.NewMemMapFs()
-		path := "/project/seil.yml"
+		path := "/project/.seil.yml"
 		content := []byte(`
 setup:
   jobs:
@@ -31,13 +31,13 @@ setup:
 
 	t.Run("returns error for non-existent file", func(t *testing.T) {
 		fs := afero.NewMemMapFs()
-		_, err := config.Load(fs, "/nonexistent/path/seil.yml")
+		_, err := config.Load(fs, "/nonexistent/path/.seil.yml")
 		assert.Error(t, err)
 	})
 
 	t.Run("returns error for invalid YAML", func(t *testing.T) {
 		fs := afero.NewMemMapFs()
-		path := "/project/seil.yml"
+		path := "/project/.seil.yml"
 		require.NoError(t, afero.WriteFile(fs, path, []byte("{bad yaml"), 0o600))
 
 		_, err := config.Load(fs, path)
@@ -46,7 +46,7 @@ setup:
 
 	t.Run("returns error when validation fails", func(t *testing.T) {
 		fs := afero.NewMemMapFs()
-		path := "/project/seil.yml"
+		path := "/project/.seil.yml"
 		content := []byte(`setup:
   jobs:
 	- run: echo hello
