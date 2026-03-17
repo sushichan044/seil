@@ -21,7 +21,7 @@ func TestLoad(t *testing.T) {
 		assert.Empty(t, resolved.Config.PostEdit.Jobs)
 	})
 
-	t.Run("loads valid config file and resolves CWD", func(t *testing.T) {
+	t.Run("loads valid config file and resolves RootDir", func(t *testing.T) {
 		fs := afero.NewMemMapFs()
 		path := "/project/.seil.yml"
 		content := []byte(`
