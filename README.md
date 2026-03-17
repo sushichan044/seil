@@ -127,8 +127,8 @@ The JSON result is grouped into `failure`, `success`, and `skipped`.
 `seil` uses `seil.yml`.
 
 - If `-c, --config <path>` is provided, that file is used.
-- Otherwise, `seil` searches from the current directory upward until the Git repository root.
-- If `seil.yml` is not found before the repository root, loading fails.
+- Otherwise, `seil` searches from the current directory upward until the filesystem root.
+- If `seil.yml` is not found, loading fails.
 
 ### Schema
 
@@ -164,11 +164,11 @@ teardown:
 
 ## Behavior
 
-- `setup` and `teardown` run all configured jobs in order.
+- `setup` and `teardown` run all configured jobs and preserve result order from the config.
 - `post-edit` skips jobs when the `glob` does not match the file path.
 - `post-edit` also skips jobs when the file is matched by `.gitignore`.
-- Output is text by default and includes grouped results, exit code, log path, and a short summary.
-- If any hook fails, `seil` exits with status code `1`.
+- The default human-readable output includes grouped results, status, log path, and a short summary.
+- If any hook fails, `seil` exits with status code `1` for the default and JSON reporters, and `2` for the Claude reporter.
 
 ### AI agent behavior
 
