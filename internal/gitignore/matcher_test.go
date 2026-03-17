@@ -49,4 +49,16 @@ func TestNewMatcherFromRoot(t *testing.T) {
 
 		assert.False(t, m.IsIgnored("anything.go"))
 	})
+
+	t.Run("handles CRLF line endings in .gitignore", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		require.NoError(t, afero.WriteFile(fs, "/repo/.gitignore", []byte("*.log\r\n*.tmp\r\n"), 0o600))
+
+		m, err := gitignore.NewMatcherFromRoot(fs, "/repo")
+		require.NoError(t, err)
+
+		assert.True(t, m.IsIgnored("app.log"))
+		assert.True(t, m.IsIgnored("cache.tmp"))
+		assert.False(t, m.IsIgnored("main.go"))
+	})
 }

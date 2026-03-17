@@ -45,4 +45,9 @@ func TestEvalJob(t *testing.T) {
 		_, err := run.EvalJob("{{.File | unknown}}", run.Vars{File: "main.go"})
 		assert.Error(t, err)
 	})
+
+	t.Run("returns error on template execution failure", func(t *testing.T) {
+		_, err := run.EvalJob("{{.NonExistent}}", run.Vars{File: "main.go"})
+		assert.Error(t, err)
+	})
 }

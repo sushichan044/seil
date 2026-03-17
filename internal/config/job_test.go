@@ -36,6 +36,11 @@ func TestJob_PathSafeName(t *testing.T) {
 		assert.Equal(t, "echo_hello", job.PathSafeName())
 	})
 
+	t.Run("uses placeholder when both Name and Run are empty", func(t *testing.T) {
+		job := config.Job{}
+		assert.Equal(t, "_no_command_", job.PathSafeName())
+	})
+
 	t.Run("replaces unsafe characters in Run", func(t *testing.T) {
 		job := config.Job{Run: "go test ./..."}
 		assert.Equal(t, "go_test_._...", job.PathSafeName())
