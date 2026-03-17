@@ -11,7 +11,7 @@ import (
 )
 
 func TestLoad(t *testing.T) {
-	t.Run("new empty config resolves CWD from root", func(t *testing.T) {
+	t.Run("new empty config resolves RootDir from root", func(t *testing.T) {
 		resolved := config.NewEmpty("/project")
 
 		assert.Equal(t, "/project", resolved.RootDir())

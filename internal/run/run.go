@@ -82,9 +82,14 @@ func (r *JobRunner) RunPostEdit(ctx context.Context, filePath string, jobs []con
 	results := make([]Result, len(jobs))
 	var wg sync.WaitGroup
 
+	relFile, relErr := filepath.Rel(r.cfg.RootDir(), filePath)
+	if relErr != nil {
+		return nil, relErr
+	}
+
 	for i, job := range jobs {
 		wg.Go(func() {
-			cmd, err := EvalJob(job.Run, Vars{File: filePath})
+			cmd, err := EvalJob(job.Run, Vars{File: relFile})
 			if err != nil {
 				results[i] = Failure(job.DisplayName(), "", err)
 				return

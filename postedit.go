@@ -2,6 +2,7 @@ package seil
 
 import (
 	"context"
+	"path/filepath"
 
 	"github.com/spf13/afero"
 
@@ -22,8 +23,13 @@ func runPostEditHooks(
 	var toRun []config.GlobJob
 	var toRunIdx []int
 
+	relPath, relErr := filepath.Rel(cfg.RootDir(), filePath)
+	if relErr != nil {
+		return nil, relErr
+	}
+
 	for i, job := range jobs {
-		if !job.Matches(filePath, cfg.RootDir()) || gitignoreMatcher.IsIgnored(filePath) {
+		if !job.Matches(filePath, cfg.RootDir()) || gitignoreMatcher.IsIgnored(relPath) {
 			results[i] = run.Skipped(job.DisplayName())
 			continue
 		}
