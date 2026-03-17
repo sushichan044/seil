@@ -5,4 +5,7 @@ setup:
 post_edit:
   jobs:
     - glob: "**/*.go"
-      run: mise run lint && mise run fmt && go test ./{{dir .File}}
+      run:  golangci-lint run ./{{dir .File}} && golangci-lint run --fix ./{{dir .File}}
+
+    - glob: "**/*.go"
+      run: go test ./{{dir .File}}
