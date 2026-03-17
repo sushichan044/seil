@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/sushichan044/seil/internal/config"
 )
@@ -55,25 +56,32 @@ func TestJob_PathSafeName(t *testing.T) {
 func TestGlobJob_Matches(t *testing.T) {
 	t.Run("returns true when glob is empty (always run)", func(t *testing.T) {
 		job := config.GlobJob{Glob: ""}
-		p := config.NewWorkspacePath("/project", "main.go")
+		p, err := config.NewWorkspacePath("/project", "main.go")
+		require.NoError(t, err)
 		assert.True(t, job.Matches(p))
 	})
 
 	t.Run("returns true when file matches glob pattern", func(t *testing.T) {
 		job := config.GlobJob{Glob: "**/*.go"}
-		p := config.NewWorkspacePath("/project", "/project/main.go")
+		p, err := config.NewWorkspacePath("/project", "/project/main.go")
+		require.NoError(t, err)
 		assert.True(t, job.Matches(p))
 	})
 
 	t.Run("returns false when file does not match glob pattern", func(t *testing.T) {
 		job := config.GlobJob{Glob: "**/*.ts"}
-		p := config.NewWorkspacePath("/project", "/project/main.go")
+		p, err := config.NewWorkspacePath("/project", "/project/main.go")
+		require.NoError(t, err)
 		assert.False(t, job.Matches(p))
 	})
 
 	t.Run("matches relative to configRoot", func(t *testing.T) {
 		job := config.GlobJob{Glob: "src/**/*.go"}
-		assert.True(t, job.Matches(config.NewWorkspacePath("/project", "/project/src/foo/bar.go")))
-		assert.False(t, job.Matches(config.NewWorkspacePath("/project", "/project/main.go")))
+		p1, err := config.NewWorkspacePath("/project", "/project/src/foo/bar.go")
+		require.NoError(t, err)
+		assert.True(t, job.Matches(p1))
+		p2, err := config.NewWorkspacePath("/project", "/project/main.go")
+		require.NoError(t, err)
+		assert.False(t, job.Matches(p2))
 	})
 }

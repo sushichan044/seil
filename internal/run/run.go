@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"errors"
 	"os/exec"
 	"path/filepath"
 	"sync"
@@ -12,6 +13,9 @@ import (
 )
 
 func Prepare(fs afero.Fs, cfg *config.ResolvedConfig) (*JobRunner, error) {
+	if cfg.RootDir() == "" {
+		return nil, errors.New("could not determine config root directory")
+	}
 	logRoot, err := afero.TempDir(fs, "", "seil-logs")
 	if err != nil {
 		return nil, err

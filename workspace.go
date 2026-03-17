@@ -31,7 +31,10 @@ func (w *Workspace) RunPostEditHooks(ctx context.Context, filePath string) ([]ru
 	if err != nil {
 		return nil, err
 	}
-	wsPath := config.NewWorkspacePath(w.config.RootDir(), filePath)
+	wsPath, err := config.NewWorkspacePath(w.config.RootDir(), filePath)
+	if err != nil {
+		return nil, err
+	}
 	return runPostEditHooks(ctx, w.config, m, w.fs, wsPath)
 }
 
