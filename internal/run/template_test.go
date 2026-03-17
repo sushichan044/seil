@@ -18,19 +18,19 @@ func TestEvalJob(t *testing.T) {
 	})
 
 	t.Run("dir function returns directory of file", func(t *testing.T) {
-		got, err := run.EvalJob("go test {{.File | dir}}", run.Vars{File: "pkg/foo/bar.go"})
+		got, err := run.EvalJob("go test {{dir .File}}", run.Vars{File: "pkg/foo/bar.go"})
 		require.NoError(t, err)
 		assert.Equal(t, "go test pkg/foo", got)
 	})
 
 	t.Run("base function returns base name", func(t *testing.T) {
-		got, err := run.EvalJob("echo {{.File | base}}", run.Vars{File: "pkg/foo/bar.go"})
+		got, err := run.EvalJob("echo {{base .File}}", run.Vars{File: "pkg/foo/bar.go"})
 		require.NoError(t, err)
 		assert.Equal(t, "echo bar.go", got)
 	})
 
 	t.Run("ext function returns extension", func(t *testing.T) {
-		got, err := run.EvalJob("echo {{.File | ext}}", run.Vars{File: "main.go"})
+		got, err := run.EvalJob("echo {{ext .File}}", run.Vars{File: "main.go"})
 		require.NoError(t, err)
 		assert.Equal(t, "echo .go", got)
 	})
@@ -49,5 +49,13 @@ func TestEvalJob(t *testing.T) {
 	t.Run("returns error on template execution failure", func(t *testing.T) {
 		_, err := run.EvalJob("{{.NonExistent}}", run.Vars{File: "main.go"})
 		assert.Error(t, err)
+	})
+}
+
+func TestEvalJobRecipe(t *testing.T) {
+	t.Run("We can use dir fn to get go package and run tests in it", func(t *testing.T) {
+		got, err := run.EvalJob("go test ./{{dir .File}}", run.Vars{File: "pkg/foo/bar.go"})
+		require.NoError(t, err)
+		assert.Equal(t, "go test ./pkg/foo", got)
 	})
 }

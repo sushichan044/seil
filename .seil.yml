@@ -5,4 +5,4 @@ setup:
 post_edit:
   jobs:
     - glob: "**/*.go"
-      run: mise run lint && mise run fmt
+      run: mise run lint && mise run fmt && go test ./{{dir .File}}
