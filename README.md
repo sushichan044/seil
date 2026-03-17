@@ -1,14 +1,8 @@
 # seil
 
-`seil` is a tool to managing AI agent lifecycle hooks with CLI.
+`seil` is a tool for managing lifecycle hooks across AI-native development workflows.
 
-It is designed for integrations that want a consistent way to trigger:
-
-- `setup` when work starts
-- `post-edit` after a file is edited
-- `teardown` when work ends
-
-Instead of hard-coding commands into each tool, define them once in `seil.yml` and call `seil`.
+It lets you define setup, teardown, and post-edit automation once in `seil.yml` and reuse it across integrations.
 
 ## Installation
 
