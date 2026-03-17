@@ -55,22 +55,25 @@ func TestJob_PathSafeName(t *testing.T) {
 func TestGlobJob_Matches(t *testing.T) {
 	t.Run("returns true when glob is empty (always run)", func(t *testing.T) {
 		job := config.GlobJob{Glob: ""}
-		assert.True(t, job.Matches("main.go", "/project"))
+		p := config.NewWorkspacePath("/project", "main.go")
+		assert.True(t, job.Matches(p))
 	})
 
 	t.Run("returns true when file matches glob pattern", func(t *testing.T) {
 		job := config.GlobJob{Glob: "**/*.go"}
-		assert.True(t, job.Matches("/project/main.go", "/project"))
+		p := config.NewWorkspacePath("/project", "/project/main.go")
+		assert.True(t, job.Matches(p))
 	})
 
 	t.Run("returns false when file does not match glob pattern", func(t *testing.T) {
 		job := config.GlobJob{Glob: "**/*.ts"}
-		assert.False(t, job.Matches("/project/main.go", "/project"))
+		p := config.NewWorkspacePath("/project", "/project/main.go")
+		assert.False(t, job.Matches(p))
 	})
 
 	t.Run("matches relative to configRoot", func(t *testing.T) {
 		job := config.GlobJob{Glob: "src/**/*.go"}
-		assert.True(t, job.Matches("/project/src/foo/bar.go", "/project"))
-		assert.False(t, job.Matches("/project/main.go", "/project"))
+		assert.True(t, job.Matches(config.NewWorkspacePath("/project", "/project/src/foo/bar.go")))
+		assert.False(t, job.Matches(config.NewWorkspacePath("/project", "/project/main.go")))
 	})
 }
