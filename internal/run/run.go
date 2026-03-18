@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/spf13/afero"
@@ -30,10 +31,11 @@ func Prepare(fs afero.Fs, cfg *config.ResolvedConfig) (*JobRunner, error) {
 	var logRoot string
 	var customDir bool
 	if dir := cfg.LogDir(); dir != "" {
-		if err := fs.MkdirAll(dir, logDirPerm); err != nil {
-			return nil, fmt.Errorf("failed to create log directory: %w", err)
+		resolved, err := prepareCustomLogDir(fs, dir, cfg.RootDir())
+		if err != nil {
+			return nil, err
 		}
-		logRoot = dir
+		logRoot = resolved
 		customDir = true
 	} else {
 		var err error
@@ -43,6 +45,24 @@ func Prepare(fs afero.Fs, cfg *config.ResolvedConfig) (*JobRunner, error) {
 		}
 	}
 	return &JobRunner{fs: fs, cfg: cfg, logRoot: logRoot, customDir: customDir}, nil
+}
+
+func prepareCustomLogDir(fs afero.Fs, dir, rootDir string) (string, error) {
+	if err := fs.MkdirAll(dir, logDirPerm); err != nil {
+		return "", fmt.Errorf("failed to create log directory: %w", err)
+	}
+	resolved, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve log directory: %w", err)
+	}
+	resolvedRoot, err := filepath.EvalSymlinks(rootDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve config root: %w", err)
+	}
+	if resolved != resolvedRoot && !strings.HasPrefix(resolved, resolvedRoot+string(filepath.Separator)) {
+		return "", errors.New("log_dir resolves outside config root via symlink")
+	}
+	return resolved, nil
 }
 
 type JobRunner struct {
