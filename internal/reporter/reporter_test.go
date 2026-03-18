@@ -57,6 +57,9 @@ func TestJSONReporter_Report(t *testing.T) {
 	err = json.Unmarshal([]byte(stdout.String()), &grouped)
 	require.NoError(t, err)
 	require.Len(t, grouped.Failure, 1)
+	require.Len(t, grouped.Skipped, 1)
+	require.NotNil(t, grouped.Skipped[0].SkipReason)
+	assert.Equal(t, run.SkipReasonGlobNoMatch, grouped.Skipped[0].SkipReason.Code)
 }
 
 func sampleResults() []run.Result {
