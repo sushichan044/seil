@@ -2,9 +2,14 @@ package run
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
+	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/spf13/afero"
@@ -12,15 +17,82 @@ import (
 	"github.com/sushichan044/seil/internal/config"
 )
 
+const (
+	logDirPerm    = 0700
+	logFilePerm   = 0600
+	randSuffixLen = 8
+)
+
 func Prepare(fs afero.Fs, cfg *config.ResolvedConfig) (*JobRunner, error) {
 	if cfg.RootDir() == "" {
 		return nil, errors.New("could not determine config root directory")
 	}
-	logRoot, err := afero.TempDir(fs, "", "seil-logs")
-	if err != nil {
-		return nil, err
+
+	var logRoot string
+	if dir := cfg.LogDir(); dir != "" {
+		resolved, err := prepareCustomLogDir(fs, dir, cfg.RootDir())
+		if err != nil {
+			return nil, err
+		}
+		logRoot = resolved
+	} else {
+		var err error
+		logRoot, err = afero.TempDir(fs, "", "seil-logs")
+		if err != nil {
+			return nil, err
+		}
 	}
-	return &JobRunner{fs, cfg, logRoot}, nil
+	return &JobRunner{fs: fs, cfg: cfg, logRoot: logRoot}, nil
+}
+
+func prepareCustomLogDir(fs afero.Fs, dir, rootDir string) (string, error) {
+	if _, ok := fs.(afero.LinkReader); ok {
+		if err := checkSymlinkEscape(fs, dir, rootDir); err != nil {
+			return "", err
+		}
+	}
+	if err := fs.MkdirAll(dir, logDirPerm); err != nil {
+		return "", fmt.Errorf("failed to create log directory: %w", err)
+	}
+	if _, ok := fs.(afero.LinkReader); ok {
+		resolved, err := filepath.EvalSymlinks(dir)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve log directory: %w", err)
+		}
+		return resolved, nil
+	}
+	return dir, nil
+}
+
+func checkSymlinkEscape(fs afero.Fs, dir, rootDir string) error {
+	resolvedRoot, err := filepath.EvalSymlinks(rootDir)
+	if err != nil {
+		return fmt.Errorf("failed to resolve config root: %w", err)
+	}
+	ancestor := dir
+	for {
+		if _, statErr := fs.Stat(ancestor); statErr == nil {
+			break
+		}
+		parent := filepath.Dir(ancestor)
+		if parent == ancestor {
+			break // reached fs root
+		}
+		ancestor = parent
+	}
+	resolvedAncestor, err := filepath.EvalSymlinks(ancestor)
+	if err != nil {
+		return fmt.Errorf("failed to resolve log directory ancestor: %w", err)
+	}
+	rel, err := filepath.Rel(ancestor, dir)
+	if err != nil {
+		return fmt.Errorf("failed to compute relative path: %w", err)
+	}
+	resolvedTarget := filepath.Join(resolvedAncestor, rel)
+	if resolvedTarget != resolvedRoot && !strings.HasPrefix(resolvedTarget, resolvedRoot+string(filepath.Separator)) {
+		return errors.New("log_dir resolves outside config root via symlink")
+	}
+	return nil
 }
 
 type JobRunner struct {
@@ -29,16 +101,16 @@ type JobRunner struct {
 	logRoot string
 }
 
-func (r *JobRunner) logFileForJob(job *config.Job) (afero.File, error) {
-	log := filepath.Join(r.logRoot, "setup-"+job.PathSafeName()+".log")
-	logFile, err := r.fs.Create(log)
-	if err != nil {
-		return nil, err
+func (r *JobRunner) logFileForJob(hookType string, job *config.Job) (afero.File, error) {
+	b := make([]byte, randSuffixLen)
+	if _, err := rand.Read(b); err != nil {
+		return nil, fmt.Errorf("failed to generate log filename: %w", err)
 	}
-	return logFile, nil
+	filename := fmt.Sprintf("%s-%s-%s.log", hookType, job.PathSafeName(), hex.EncodeToString(b))
+	return r.fs.OpenFile(filepath.Join(r.logRoot, filename), os.O_CREATE|os.O_EXCL|os.O_WRONLY, logFilePerm)
 }
 
-func (r *JobRunner) runJobs(ctx context.Context, jobs []config.Job) []Result {
+func (r *JobRunner) runJobs(ctx context.Context, hookType string, jobs []config.Job) []Result {
 	results := make([]Result, len(jobs))
 	var wg sync.WaitGroup
 
@@ -49,7 +121,7 @@ func (r *JobRunner) runJobs(ctx context.Context, jobs []config.Job) []Result {
 				results[i] = Failure(job.DisplayName(), "", err)
 				return
 			}
-			logFile, err := r.logFileForJob(&job)
+			logFile, err := r.logFileForJob(hookType, &job)
 			if err != nil {
 				results[i] = Failure(job.DisplayName(), "", err)
 				return
@@ -73,11 +145,11 @@ func (r *JobRunner) runJobs(ctx context.Context, jobs []config.Job) []Result {
 }
 
 func (r *JobRunner) RunSetup(ctx context.Context) ([]Result, error) {
-	return r.runJobs(ctx, r.cfg.Config.Setup.Jobs), nil
+	return r.runJobs(ctx, "setup", r.cfg.Config.Setup.Jobs), nil
 }
 
 func (r *JobRunner) RunTeardown(ctx context.Context) ([]Result, error) {
-	return r.runJobs(ctx, r.cfg.Config.Teardown.Jobs), nil
+	return r.runJobs(ctx, "teardown", r.cfg.Config.Teardown.Jobs), nil
 }
 
 // RunPostEdit executes the given pre-filtered jobs for the edited file.
@@ -97,7 +169,7 @@ func (r *JobRunner) RunPostEdit(
 				results[i] = Failure(job.DisplayName(), "", err)
 				return
 			}
-			logFile, err := r.logFileForJob(&job.Job)
+			logFile, err := r.logFileForJob("post-edit", &job.Job)
 			if err != nil {
 				results[i] = Failure(job.DisplayName(), "", err)
 				return
