@@ -18,15 +18,26 @@ type WorkspacePath struct {
 // Returns an error if a relative filePath escapes the workspace root (e.g. "../../etc/passwd").
 // Absolute paths are accepted regardless of whether they are inside the root.
 func NewWorkspacePath(root, filePath string) (WorkspacePath, error) {
-	abs := filePath
-	if !filepath.IsAbs(filePath) {
-		abs = filepath.Join(root, filePath)
-		rel, err := filepath.Rel(root, abs)
-		if err != nil || strings.HasPrefix(rel, "..") {
-			return WorkspacePath{}, fmt.Errorf("path %q is outside workspace root %q", filePath, root)
-		}
+	absRoot, err := filepath.Abs(filepath.Clean(root))
+	if err != nil {
+		return WorkspacePath{}, fmt.Errorf("failed to resolve workspace root %q: %w", root, err)
 	}
-	return WorkspacePath{root: root, abs: abs}, nil
+
+	abs := filePath
+	if !filepath.IsAbs(abs) {
+		abs = filepath.Join(absRoot, abs)
+	}
+	abs, err = filepath.Abs(filepath.Clean(abs))
+	if err != nil {
+		return WorkspacePath{}, fmt.Errorf("failed to resolve path %q: %w", filePath, err)
+	}
+
+	rel, err := filepath.Rel(absRoot, abs)
+	relSlash := filepath.ToSlash(rel)
+	if err != nil || rel == ".." || strings.HasPrefix(relSlash, "../") {
+		return WorkspacePath{}, fmt.Errorf("path %q is outside workspace root %q", filePath, absRoot)
+	}
+	return WorkspacePath{root: absRoot, abs: abs}, nil
 }
 
 // Abs returns the absolute path of the file.

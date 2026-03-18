@@ -219,12 +219,13 @@ func TestPostEdit_TextFormat_IsDefault(t *testing.T) {
 // TestConfig_ExplicitPath verifies that -c <path> loads config from outside the working directory.
 func TestConfig_ExplicitPath(t *testing.T) {
 	configDir := t.TempDir()
-	workDir := t.TempDir()
-
+	workDir := filepath.Join(configDir, "workspace")
+	err := os.Mkdir(workDir, 0o755)
+	require.NoError(t, err)
 	writeLegacyConfigYML(t, configDir, "lint", "echo linted")
 
 	targetFile := filepath.Join(workDir, "app.go")
-	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
+	err = os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
 	cfgPath := filepath.Join(configDir, "seil.yml")
@@ -296,19 +297,19 @@ func TestSetup_TextFormat_IsDefault(t *testing.T) {
 
 // TestConfig_AutoDiscovery verifies that without -c the config is discovered from the working directory.
 func TestConfig_AutoDiscovery(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpRepoRoot := t.TempDir()
 
 	// Create .git dir so git.FindRepoRootFrom recognizes tmpDir as a repo root.
-	err := os.Mkdir(filepath.Join(tmpDir, ".git"), 0o755)
+	err := os.Mkdir(filepath.Join(tmpRepoRoot, ".git"), 0o755)
 	require.NoError(t, err)
 
-	writeDefaultConfigYML(t, tmpDir, "fmt", "echo formatted")
+	writeDefaultConfigYML(t, tmpRepoRoot, "fmt", "echo formatted")
 
-	targetFile := filepath.Join(tmpDir, "main.go")
+	targetFile := filepath.Join(tmpRepoRoot, "main.go")
 	err = os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
-	result := runSeil(t, tmpDir, "--reporter", "json", "post-edit", targetFile)
+	result := runSeil(t, tmpRepoRoot, "--reporter", "json", "post-edit", targetFile)
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 
