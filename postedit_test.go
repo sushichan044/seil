@@ -184,6 +184,30 @@ post_edit:
 		assert.Equal(t, run.StatusSuccess, results[0].Status)
 	})
 
+	t.Run("skips all hooks when file is outside workspace", func(t *testing.T) {
+		repoDir := t.TempDir()
+		cfg := loadCfg(t, repoDir, `
+post_edit:
+  jobs:
+    - name: fmt
+      glob: "**/*.go"
+      run: echo go
+`)
+		ws, err := seil.NewWorkspace(cfg)
+		require.NoError(t, err)
+
+		outsideDir := t.TempDir()
+		outsideFile := filepath.Join(outsideDir, "outside.go")
+		require.NoError(t, os.WriteFile(outsideFile, []byte(""), 0o600))
+
+		results, err := ws.RunPostEditHooks(context.Background(), outsideFile)
+		require.NoError(t, err)
+		require.Len(t, results, 1)
+		assert.Equal(t, run.StatusSkipped, results[0].Status)
+		require.NotNil(t, results[0].SkipReason)
+		assert.Equal(t, run.SkipReasonOutsideWorkspace, results[0].SkipReason.Code)
+	})
+
 	t.Run("no-op when config is empty", func(t *testing.T) {
 		repoDir := t.TempDir()
 		cfg := config.NewEmpty(repoDir)

@@ -13,8 +13,9 @@ const (
 type SkipReasonCode string
 
 const (
-	SkipReasonGlobNoMatch SkipReasonCode = "glob_no_match"
-	SkipReasonGitignored  SkipReasonCode = "gitignored"
+	SkipReasonGlobNoMatch      SkipReasonCode = "glob_no_match"
+	SkipReasonGitignored       SkipReasonCode = "gitignored"
+	SkipReasonOutsideWorkspace SkipReasonCode = "outside_workspace"
 )
 
 // SkipReason holds a machine-readable code and a human-readable message.

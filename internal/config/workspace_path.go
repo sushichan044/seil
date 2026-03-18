@@ -8,6 +8,16 @@ import (
 	"strings"
 )
 
+// OutsideWorkspaceError is returned when a file path is outside the workspace root.
+type OutsideWorkspaceError struct {
+	FilePath string
+	Root     string
+}
+
+func (e *OutsideWorkspaceError) Error() string {
+	return fmt.Sprintf("path %q is outside workspace root %q", e.FilePath, e.Root)
+}
+
 // WorkspacePath is a file path anchored to a workspace root.
 // Relative paths are interpreted as relative to root (not CWD).
 type WorkspacePath struct {
@@ -52,7 +62,7 @@ func NewWorkspacePath(root, filePath string) (WorkspacePath, error) {
 	rel, err := filepath.Rel(realRoot, realAbs)
 	relSlash := filepath.ToSlash(rel)
 	if err != nil || rel == ".." || strings.HasPrefix(relSlash, "../") {
-		return WorkspacePath{}, fmt.Errorf("path %q is outside workspace root %q", filePath, realRoot)
+		return WorkspacePath{}, &OutsideWorkspaceError{FilePath: filePath, Root: realRoot}
 	}
 	return WorkspacePath{root: realRoot, abs: realAbs}, nil
 }
