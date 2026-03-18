@@ -15,7 +15,7 @@ func runPostEditHooks(
 	cfg *config.ResolvedConfig,
 	gitignoreMatcher *gitignore.Matcher,
 	fs afero.Fs,
-	filePath string,
+	wsPath config.WorkspacePath,
 ) ([]run.Result, error) {
 	jobs := cfg.Config.PostEdit.Jobs
 	results := make([]run.Result, len(jobs))
@@ -23,7 +23,7 @@ func runPostEditHooks(
 	var toRunIdx []int
 
 	for i, job := range jobs {
-		if !job.Matches(filePath, cfg.CWD()) || gitignoreMatcher.IsIgnored(filePath) {
+		if !job.Matches(wsPath) || gitignoreMatcher.IsIgnored(wsPath.Rel()) {
 			results[i] = run.Skipped(job.DisplayName())
 			continue
 		}
@@ -40,7 +40,7 @@ func runPostEditHooks(
 		return nil, err
 	}
 
-	runResults, err := r.RunPostEdit(ctx, filePath, toRun)
+	runResults, err := r.RunPostEdit(ctx, wsPath, toRun)
 	if err != nil {
 		return nil, err
 	}

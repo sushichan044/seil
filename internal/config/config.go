@@ -22,11 +22,34 @@ var configSchema = z.Struct(z.Shape{
 
 type ResolvedConfig struct {
 	Config Config
-	path   string
+
+	// basename is the basename of the config file.
+	//
+	// If config file is exists, this is an actual basename.
+	// If config file is not exists, this is a default name.
+	basename string
+
+	// rootDir is the root directory to resolve relative paths in the config file.
+	rootDir string
 }
 
-func (r *ResolvedConfig) CWD() string {
-	return filepath.Dir(r.path)
+func NewEmpty(rootDir string) *ResolvedConfig {
+	return &ResolvedConfig{
+		Config:   Config{},
+		rootDir:  rootDir,
+		basename: defaultConfigFileName,
+	}
+}
+
+func (r *ResolvedConfig) RootDir() string {
+	return r.rootDir
+}
+
+// ConfigPath returns the absolute path to the config file.
+//
+// Existence of the file is not guaranteed.
+func (r *ResolvedConfig) ConfigPath() string {
+	return filepath.Join(r.rootDir, r.basename)
 }
 
 // ParseConfigYAML parses bytes and returns a validated Config.

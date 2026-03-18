@@ -58,18 +58,13 @@ func (job *Job) displayableRun() string {
 	return job.Run
 }
 
-// Matches reports whether this job should run for the given filePath.
-// filePath and configRoot should both be absolute paths.
+// Matches reports whether this job should run for the given file.
 // If Glob is empty, the job always matches.
-func (j *GlobJob) Matches(filePath, configRoot string) bool {
+func (j *GlobJob) Matches(p WorkspacePath) bool {
 	if j.Glob == "" {
 		return true
 	}
-	rel, err := filepath.Rel(configRoot, filePath)
-	if err != nil {
-		rel = filePath
-	}
-	normalized := filepath.ToSlash(rel)
+	normalized := filepath.ToSlash(p.Rel())
 	matched, err := doublestar.Match(j.Glob, normalized)
 	return err == nil && matched
 }

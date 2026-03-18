@@ -122,7 +122,7 @@ The JSON result is grouped into `failure`, `success`, and `skipped`.
 
 - If `-c, --config <path>` is provided, that file is used.
 - Otherwise, `seil` searches from the current directory upward until the filesystem root.
-- If `.seil.yml` is not found, loading fails.
+- If `.seil.yml` is not found during auto-discovery, `seil` treats it as a no-op and exits successfully.
 - To use a different filename such as `seil.yml`, pass it with `-c, --config`.
 
 ### Schema
@@ -162,6 +162,7 @@ teardown:
 - `setup` and `teardown` run all configured jobs and preserve result order from the config.
 - `post-edit` skips jobs when the `glob` does not match the file path.
 - `post-edit` also skips jobs when the file is matched by `.gitignore`.
+- If no config file is found during auto-discovery, all commands return an empty result set and exit with status code `0`.
 - The default human-readable output includes grouped results, status, log path, and a short summary.
 - If any hook fails, `seil` exits with status code `1` for the default and JSON reporters, and `2` for the Claude reporter.
 

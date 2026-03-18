@@ -11,7 +11,17 @@ import (
 )
 
 func TestLoad(t *testing.T) {
-	t.Run("loads valid config file and resolves CWD", func(t *testing.T) {
+	t.Run("new empty config resolves RootDir from root", func(t *testing.T) {
+		resolved := config.NewEmpty("/project")
+
+		assert.Equal(t, "/project", resolved.RootDir())
+		assert.Equal(t, "/project/.seil.yml", resolved.ConfigPath())
+		assert.Empty(t, resolved.Config.Setup.Jobs)
+		assert.Empty(t, resolved.Config.Teardown.Jobs)
+		assert.Empty(t, resolved.Config.PostEdit.Jobs)
+	})
+
+	t.Run("loads valid config file and resolves RootDir and ConfigPath", func(t *testing.T) {
 		fs := afero.NewMemMapFs()
 		path := "/project/.seil.yml"
 		content := []byte(`
@@ -24,7 +34,8 @@ setup:
 		resolved, err := config.Load(fs, path)
 		require.NoError(t, err)
 
-		assert.Equal(t, "/project", resolved.CWD())
+		assert.Equal(t, "/project", resolved.RootDir())
+		assert.Equal(t, "/project/.seil.yml", resolved.ConfigPath())
 		require.Len(t, resolved.Config.Setup.Jobs, 1)
 		assert.Equal(t, "echo hello", resolved.Config.Setup.Jobs[0].Run)
 	})

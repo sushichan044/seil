@@ -24,8 +24,12 @@ func Load(fs afero.Fs, path string) (*ResolvedConfig, error) {
 		return nil, err
 	}
 
+	configRoot := filepath.Dir(configPath)
+	filename := filepath.Base(configPath)
+
 	return &ResolvedConfig{
-		Config: *config,
-		path:   configPath,
+		Config:   *config,
+		basename: filename,
+		rootDir:  configRoot,
 	}, nil
 }

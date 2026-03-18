@@ -219,12 +219,13 @@ func TestPostEdit_TextFormat_IsDefault(t *testing.T) {
 // TestConfig_ExplicitPath verifies that -c <path> loads config from outside the working directory.
 func TestConfig_ExplicitPath(t *testing.T) {
 	configDir := t.TempDir()
-	workDir := t.TempDir()
-
+	workDir := filepath.Join(configDir, "workspace")
+	err := os.Mkdir(workDir, 0o755)
+	require.NoError(t, err)
 	writeLegacyConfigYML(t, configDir, "lint", "echo linted")
 
 	targetFile := filepath.Join(workDir, "app.go")
-	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
+	err = os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
 	cfgPath := filepath.Join(configDir, "seil.yml")
@@ -296,19 +297,19 @@ func TestSetup_TextFormat_IsDefault(t *testing.T) {
 
 // TestConfig_AutoDiscovery verifies that without -c the config is discovered from the working directory.
 func TestConfig_AutoDiscovery(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpRepoRoot := t.TempDir()
 
 	// Create .git dir so git.FindRepoRootFrom recognizes tmpDir as a repo root.
-	err := os.Mkdir(filepath.Join(tmpDir, ".git"), 0o755)
+	err := os.Mkdir(filepath.Join(tmpRepoRoot, ".git"), 0o755)
 	require.NoError(t, err)
 
-	writeDefaultConfigYML(t, tmpDir, "fmt", "echo formatted")
+	writeDefaultConfigYML(t, tmpRepoRoot, "fmt", "echo formatted")
 
-	targetFile := filepath.Join(tmpDir, "main.go")
+	targetFile := filepath.Join(tmpRepoRoot, "main.go")
 	err = os.WriteFile(targetFile, []byte("package main\n"), 0o644)
 	require.NoError(t, err)
 
-	result := runSeil(t, tmpDir, "--reporter", "json", "post-edit", targetFile)
+	result := runSeil(t, tmpRepoRoot, "--reporter", "json", "post-edit", targetFile)
 
 	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
 
@@ -318,6 +319,72 @@ func TestConfig_AutoDiscovery(t *testing.T) {
 	require.NotEmpty(t, results.Success)
 
 	assert.Equal(t, "fmt", results.Success[0].Name)
+}
+
+func TestPostEdit_AutoDiscovery_MissingConfig_IsNoOpForJSONReporter(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	targetFile := filepath.Join(tmpDir, "main.go")
+	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
+	require.NoError(t, err)
+
+	result := runSeil(t, tmpDir, "--reporter", "json", "post-edit", targetFile)
+
+	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
+	assert.Empty(t, result.Stderr)
+
+	var results groupedResultsJSON
+	err = json.Unmarshal([]byte(result.Stdout), &results)
+	require.NoError(t, err, "stdout should be valid JSON: %s", result.Stdout)
+	assert.Empty(t, results.Failure)
+	assert.Empty(t, results.Success)
+	assert.Empty(t, results.Skipped)
+}
+
+func TestSetup_AutoDiscovery_MissingConfig_IsNoOp(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	result := runSeil(t, tmpDir, "setup")
+
+	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
+	assert.Empty(t, result.Stderr)
+	assert.Contains(t, result.Stdout, "0 succeeded, 0 failed, 0 skipped")
+}
+
+func TestTeardown_AutoDiscovery_MissingConfig_IsNoOp(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	result := runSeil(t, tmpDir, "teardown")
+
+	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
+	assert.Empty(t, result.Stderr)
+	assert.Contains(t, result.Stdout, "0 succeeded, 0 failed, 0 skipped")
+}
+
+func TestPostEdit_AutoDiscovery_MissingConfig_IsNoOpForClaudeReporter(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	targetFile := filepath.Join(tmpDir, "main.go")
+	err := os.WriteFile(targetFile, []byte("package main\n"), 0o644)
+	require.NoError(t, err)
+
+	result := runSeilWithEnv(t, tmpDir, map[string]string{
+		"AI_AGENT": "claude",
+	}, "post-edit", targetFile)
+
+	assert.Equal(t, 0, result.ExitCode, "stderr: %s", result.Stderr)
+	assert.Empty(t, result.Stderr)
+	assert.Equal(t, "0 succeeded, 0 failed, 0 skipped\n", result.Stdout)
+}
+
+func TestConfig_ExplicitMissingPath_Fails(t *testing.T) {
+	tmpDir := t.TempDir()
+	missingCfgPath := filepath.Join(tmpDir, "missing.yml")
+
+	result := runSeil(t, tmpDir, "-c", missingCfgPath, "setup")
+
+	assert.NotEqual(t, 0, result.ExitCode)
+	assert.Contains(t, result.Stderr, "missing.yml")
 }
 
 // TestPostEdit_JSON_Failure_ExitCode verifies that reporter json exits with code 1 when a hook fails.

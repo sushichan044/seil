@@ -11,7 +11,17 @@ import (
 var ErrConfigNotFound = errors.New("config file not found")
 
 func FindConfigFile(fs afero.Fs, fromPath string) (string, error) {
-	startDir := filepath.Dir(fromPath)
+	startDir := filepath.Clean(fromPath)
+
+	info, err := fs.Stat(startDir)
+	switch {
+	case err == nil && info.IsDir():
+		// keep startDir as is
+	case err == nil || os.IsNotExist(err):
+		startDir = filepath.Dir(startDir)
+	default:
+		return "", err
+	}
 
 	for dir := startDir; ; dir = filepath.Dir(dir) {
 		configPath := filepath.Join(dir, defaultConfigFileName)

@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"errors"
 	"os/exec"
 	"path/filepath"
 	"sync"
@@ -12,6 +13,9 @@ import (
 )
 
 func Prepare(fs afero.Fs, cfg *config.ResolvedConfig) (*JobRunner, error) {
+	if cfg.RootDir() == "" {
+		return nil, errors.New("could not determine config root directory")
+	}
 	logRoot, err := afero.TempDir(fs, "", "seil-logs")
 	if err != nil {
 		return nil, err
@@ -40,7 +44,7 @@ func (r *JobRunner) runJobs(ctx context.Context, jobs []config.Job) []Result {
 
 	for i, job := range jobs {
 		wg.Go(func() {
-			cmd, err := EvalJob(job.Run, Vars{})
+			cmd, err := EvalJob(job.Run, JobEvaluationParams{})
 			if err != nil {
 				results[i] = Failure(job.DisplayName(), "", err)
 				return
@@ -53,7 +57,7 @@ func (r *JobRunner) runJobs(ctx context.Context, jobs []config.Job) []Result {
 			defer logFile.Close()
 
 			proc := exec.CommandContext(ctx, "sh", "-c", cmd)
-			proc.Dir = r.cfg.CWD()
+			proc.Dir = r.cfg.RootDir()
 			proc.Stdout = logFile
 			proc.Stderr = logFile
 
@@ -76,15 +80,19 @@ func (r *JobRunner) RunTeardown(ctx context.Context) ([]Result, error) {
 	return r.runJobs(ctx, r.cfg.Config.Teardown.Jobs), nil
 }
 
-// RunPostEdit executes the given pre-filtered jobs for the edited file at filePath.
+// RunPostEdit executes the given pre-filtered jobs for the edited file.
 // Callers are responsible for filtering jobs (via GlobJob.Matches + gitignore) before calling.
-func (r *JobRunner) RunPostEdit(ctx context.Context, filePath string, jobs []config.GlobJob) ([]Result, error) {
+func (r *JobRunner) RunPostEdit(
+	ctx context.Context,
+	wsPath config.WorkspacePath,
+	jobs []config.GlobJob,
+) ([]Result, error) {
 	results := make([]Result, len(jobs))
 	var wg sync.WaitGroup
 
 	for i, job := range jobs {
 		wg.Go(func() {
-			cmd, err := EvalJob(job.Run, Vars{File: filePath})
+			cmd, err := EvalJob(job.Run, JobEvaluationParams{Filepath: wsPath})
 			if err != nil {
 				results[i] = Failure(job.DisplayName(), "", err)
 				return
@@ -97,7 +105,7 @@ func (r *JobRunner) RunPostEdit(ctx context.Context, filePath string, jobs []con
 			defer logFile.Close()
 
 			proc := exec.CommandContext(ctx, "sh", "-c", cmd)
-			proc.Dir = r.cfg.CWD()
+			proc.Dir = r.cfg.RootDir()
 			proc.Stdout = logFile
 			proc.Stderr = logFile
 
