@@ -63,6 +63,9 @@ func sampleResults() []run.Result {
 	return []run.Result{
 		run.Success("ok", "/tmp/ok.log"),
 		run.Failure("fail", "/tmp/fail.log", errors.New("exit status 1")),
-		run.Skipped("skip"),
+		run.Skipped("skip", run.SkipReason{
+			Code:    run.SkipReasonGlobNoMatch,
+			Message: `glob pattern "**/*.ts" did not match`,
+		}),
 	}
 }
