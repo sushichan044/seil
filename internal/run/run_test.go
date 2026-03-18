@@ -55,7 +55,7 @@ setup:
 		assert.NoError(t, statErr, "log directory should be created")
 	})
 
-	t.Run("log files go to custom dir with timestamped names", func(t *testing.T) {
+	t.Run("log files go to custom dir with random suffix names", func(t *testing.T) {
 		repoDir := t.TempDir()
 		cfg := loadCfg(t, repoDir, `
 log_dir: .seil/logs
@@ -73,6 +73,11 @@ setup:
 		require.Len(t, results, 1)
 		assert.Equal(t, run.StatusSuccess, results[0].Status)
 		assert.Contains(t, results[0].LogFile, filepath.Join(repoDir, ".seil", "logs", "setup-greet-"))
+
+		results2, err := r.RunSetup(context.Background())
+		require.NoError(t, err)
+		require.Len(t, results2, 1)
+		assert.NotEqual(t, results[0].LogFile, results2[0].LogFile)
 	})
 
 	t.Run("temp dir used when log_dir is not set", func(t *testing.T) {

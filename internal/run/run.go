@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
@@ -17,6 +18,7 @@ import (
 
 const (
 	logDirPerm    = 0700
+	logFilePerm   = 0600
 	randSuffixLen = 8
 )
 
@@ -58,14 +60,10 @@ func (r *JobRunner) logFileForJob(hookType string, job *config.Job) (afero.File,
 			return nil, fmt.Errorf("failed to generate log filename: %w", err)
 		}
 		filename = fmt.Sprintf("%s-%s-%s.log", hookType, job.PathSafeName(), hex.EncodeToString(b))
-	} else {
-		filename = hookType + "-" + job.PathSafeName() + ".log"
+		return r.fs.OpenFile(filepath.Join(r.logRoot, filename), os.O_CREATE|os.O_EXCL|os.O_WRONLY, logFilePerm)
 	}
-	logFile, err := r.fs.Create(filepath.Join(r.logRoot, filename))
-	if err != nil {
-		return nil, err
-	}
-	return logFile, nil
+	filename = hookType + "-" + job.PathSafeName() + ".log"
+	return r.fs.Create(filepath.Join(r.logRoot, filename))
 }
 
 func (r *JobRunner) runJobs(ctx context.Context, hookType string, jobs []config.Job) []Result {
