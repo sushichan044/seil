@@ -3,42 +3,64 @@ package run
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/spf13/afero"
 
 	"github.com/sushichan044/seil/internal/config"
 )
 
+const logDirPerm = 0700
+
 func Prepare(fs afero.Fs, cfg *config.ResolvedConfig) (*JobRunner, error) {
 	if cfg.RootDir() == "" {
 		return nil, errors.New("could not determine config root directory")
 	}
-	logRoot, err := afero.TempDir(fs, "", "seil-logs")
-	if err != nil {
-		return nil, err
+
+	var logRoot string
+	var customDir bool
+	if dir := cfg.LogDir(); dir != "" {
+		if err := fs.MkdirAll(dir, logDirPerm); err != nil {
+			return nil, fmt.Errorf("failed to create log directory: %w", err)
+		}
+		logRoot = dir
+		customDir = true
+	} else {
+		var err error
+		logRoot, err = afero.TempDir(fs, "", "seil-logs")
+		if err != nil {
+			return nil, err
+		}
 	}
-	return &JobRunner{fs, cfg, logRoot}, nil
+	return &JobRunner{fs, cfg, logRoot, customDir}, nil
 }
 
 type JobRunner struct {
-	fs      afero.Fs
-	cfg     *config.ResolvedConfig
-	logRoot string
+	fs        afero.Fs
+	cfg       *config.ResolvedConfig
+	logRoot   string
+	customDir bool
 }
 
-func (r *JobRunner) logFileForJob(job *config.Job) (afero.File, error) {
-	log := filepath.Join(r.logRoot, "setup-"+job.PathSafeName()+".log")
-	logFile, err := r.fs.Create(log)
+func (r *JobRunner) logFileForJob(hookType string, job *config.Job) (afero.File, error) {
+	var filename string
+	if r.customDir {
+		filename = fmt.Sprintf("%s-%s-%d.log", hookType, job.PathSafeName(), time.Now().UnixNano())
+	} else {
+		filename = hookType + "-" + job.PathSafeName() + ".log"
+	}
+	logFile, err := r.fs.Create(filepath.Join(r.logRoot, filename))
 	if err != nil {
 		return nil, err
 	}
 	return logFile, nil
 }
 
-func (r *JobRunner) runJobs(ctx context.Context, jobs []config.Job) []Result {
+func (r *JobRunner) runJobs(ctx context.Context, hookType string, jobs []config.Job) []Result {
 	results := make([]Result, len(jobs))
 	var wg sync.WaitGroup
 
@@ -49,7 +71,7 @@ func (r *JobRunner) runJobs(ctx context.Context, jobs []config.Job) []Result {
 				results[i] = Failure(job.DisplayName(), "", err)
 				return
 			}
-			logFile, err := r.logFileForJob(&job)
+			logFile, err := r.logFileForJob(hookType, &job)
 			if err != nil {
 				results[i] = Failure(job.DisplayName(), "", err)
 				return
@@ -73,11 +95,11 @@ func (r *JobRunner) runJobs(ctx context.Context, jobs []config.Job) []Result {
 }
 
 func (r *JobRunner) RunSetup(ctx context.Context) ([]Result, error) {
-	return r.runJobs(ctx, r.cfg.Config.Setup.Jobs), nil
+	return r.runJobs(ctx, "setup", r.cfg.Config.Setup.Jobs), nil
 }
 
 func (r *JobRunner) RunTeardown(ctx context.Context) ([]Result, error) {
-	return r.runJobs(ctx, r.cfg.Config.Teardown.Jobs), nil
+	return r.runJobs(ctx, "teardown", r.cfg.Config.Teardown.Jobs), nil
 }
 
 // RunPostEdit executes the given pre-filtered jobs for the edited file.
@@ -97,7 +119,7 @@ func (r *JobRunner) RunPostEdit(
 				results[i] = Failure(job.DisplayName(), "", err)
 				return
 			}
-			logFile, err := r.logFileForJob(&job.Job)
+			logFile, err := r.logFileForJob("post-edit", &job.Job)
 			if err != nil {
 				results[i] = Failure(job.DisplayName(), "", err)
 				return

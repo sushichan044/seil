@@ -36,6 +36,65 @@ setup:
 	assert.NotNil(t, r)
 }
 
+func TestPrepare_CustomLogDir(t *testing.T) {
+	t.Run("creates log dir when log_dir is set", func(t *testing.T) {
+		repoDir := t.TempDir()
+		cfg := loadCfg(t, repoDir, `
+log_dir: .seil/logs
+setup:
+  jobs:
+    - name: hello
+      run: echo hello
+`)
+		fs := afero.NewOsFs()
+		r, err := run.Prepare(fs, cfg)
+		require.NoError(t, err)
+		assert.NotNil(t, r)
+
+		_, statErr := fs.Stat(repoDir + "/.seil/logs")
+		assert.NoError(t, statErr, "log directory should be created")
+	})
+
+	t.Run("log files go to custom dir with timestamped names", func(t *testing.T) {
+		repoDir := t.TempDir()
+		cfg := loadCfg(t, repoDir, `
+log_dir: .seil/logs
+setup:
+  jobs:
+    - name: greet
+      run: echo hello
+`)
+		fs := afero.NewOsFs()
+		r, err := run.Prepare(fs, cfg)
+		require.NoError(t, err)
+
+		results, err := r.RunSetup(context.Background())
+		require.NoError(t, err)
+		require.Len(t, results, 1)
+		assert.Equal(t, run.StatusSuccess, results[0].Status)
+		assert.Contains(t, results[0].LogFile, repoDir+"/.seil/logs/setup-greet-")
+	})
+
+	t.Run("temp dir used when log_dir is not set", func(t *testing.T) {
+		repoDir := t.TempDir()
+		cfg := loadCfg(t, repoDir, `
+setup:
+  jobs:
+    - name: greet
+      run: echo hello
+`)
+		r, err := run.Prepare(afero.NewOsFs(), cfg)
+		require.NoError(t, err)
+
+		results, err := r.RunSetup(context.Background())
+		require.NoError(t, err)
+		require.Len(t, results, 1)
+		assert.Equal(t, run.StatusSuccess, results[0].Status)
+		assert.Contains(t, results[0].LogFile, "seil-logs")
+		assert.NotContains(t, results[0].LogFile, repoDir)
+	})
+}
+
 func TestJobRunner_RunSetup(t *testing.T) {
 	t.Run("returns empty slice when no setup jobs", func(t *testing.T) {
 		repoDir := t.TempDir()

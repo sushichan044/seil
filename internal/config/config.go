@@ -8,6 +8,7 @@ import (
 )
 
 type Config struct {
+	LogDir   string       `yaml:"log_dir"`
 	PostEdit PostEditHook `yaml:"post_edit"`
 	Setup    SetupHook    `yaml:"setup"`
 	Teardown TeardownHook `yaml:"teardown"`
@@ -50,6 +51,15 @@ func (r *ResolvedConfig) RootDir() string {
 // Existence of the file is not guaranteed.
 func (r *ResolvedConfig) ConfigPath() string {
 	return filepath.Join(r.rootDir, r.basename)
+}
+
+// LogDir returns the resolved absolute path to the custom log directory.
+// Returns empty string if not configured (use temp dir).
+func (r *ResolvedConfig) LogDir() string {
+	if r.Config.LogDir == "" {
+		return ""
+	}
+	return filepath.Join(r.rootDir, r.Config.LogDir)
 }
 
 // ParseConfigYAML parses bytes and returns a validated Config.
