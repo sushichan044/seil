@@ -192,6 +192,9 @@ post_edit:
     - name: fmt
       glob: "**/*.go"
       run: echo go
+    - name: lint
+      glob: "**/*.go"
+      run: echo lint
 `)
 		ws, err := seil.NewWorkspace(cfg)
 		require.NoError(t, err)
@@ -202,10 +205,12 @@ post_edit:
 
 		results, err := ws.RunPostEditHooks(context.Background(), outsideFile)
 		require.NoError(t, err)
-		require.Len(t, results, 1)
-		assert.Equal(t, run.StatusSkipped, results[0].Status)
-		require.NotNil(t, results[0].SkipReason)
-		assert.Equal(t, run.SkipReasonOutsideWorkspace, results[0].SkipReason.Code)
+		require.Len(t, results, 2)
+		for _, res := range results {
+			assert.Equal(t, run.StatusSkipped, res.Status)
+			require.NotNil(t, res.SkipReason)
+			assert.Equal(t, run.SkipReasonOutsideWorkspace, res.SkipReason.Code)
+		}
 	})
 
 	t.Run("no-op when config is empty", func(t *testing.T) {
