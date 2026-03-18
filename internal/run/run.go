@@ -29,14 +29,12 @@ func Prepare(fs afero.Fs, cfg *config.ResolvedConfig) (*JobRunner, error) {
 	}
 
 	var logRoot string
-	var customDir bool
 	if dir := cfg.LogDir(); dir != "" {
 		resolved, err := prepareCustomLogDir(fs, dir, cfg.RootDir())
 		if err != nil {
 			return nil, err
 		}
 		logRoot = resolved
-		customDir = true
 	} else {
 		var err error
 		logRoot, err = afero.TempDir(fs, "", "seil-logs")
@@ -44,7 +42,7 @@ func Prepare(fs afero.Fs, cfg *config.ResolvedConfig) (*JobRunner, error) {
 			return nil, err
 		}
 	}
-	return &JobRunner{fs: fs, cfg: cfg, logRoot: logRoot, customDir: customDir}, nil
+	return &JobRunner{fs: fs, cfg: cfg, logRoot: logRoot}, nil
 }
 
 func prepareCustomLogDir(fs afero.Fs, dir, rootDir string) (string, error) {
@@ -98,24 +96,18 @@ func checkSymlinkEscape(fs afero.Fs, dir, rootDir string) error {
 }
 
 type JobRunner struct {
-	fs        afero.Fs
-	cfg       *config.ResolvedConfig
-	logRoot   string
-	customDir bool
+	fs      afero.Fs
+	cfg     *config.ResolvedConfig
+	logRoot string
 }
 
 func (r *JobRunner) logFileForJob(hookType string, job *config.Job) (afero.File, error) {
-	var filename string
-	if r.customDir {
-		b := make([]byte, randSuffixLen)
-		if _, err := rand.Read(b); err != nil {
-			return nil, fmt.Errorf("failed to generate log filename: %w", err)
-		}
-		filename = fmt.Sprintf("%s-%s-%s.log", hookType, job.PathSafeName(), hex.EncodeToString(b))
-		return r.fs.OpenFile(filepath.Join(r.logRoot, filename), os.O_CREATE|os.O_EXCL|os.O_WRONLY, logFilePerm)
+	b := make([]byte, randSuffixLen)
+	if _, err := rand.Read(b); err != nil {
+		return nil, fmt.Errorf("failed to generate log filename: %w", err)
 	}
-	filename = hookType + "-" + job.PathSafeName() + ".log"
-	return r.fs.Create(filepath.Join(r.logRoot, filename))
+	filename := fmt.Sprintf("%s-%s-%s.log", hookType, job.PathSafeName(), hex.EncodeToString(b))
+	return r.fs.OpenFile(filepath.Join(r.logRoot, filename), os.O_CREATE|os.O_EXCL|os.O_WRONLY, logFilePerm)
 }
 
 func (r *JobRunner) runJobs(ctx context.Context, hookType string, jobs []config.Job) []Result {
