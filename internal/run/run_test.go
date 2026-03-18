@@ -51,7 +51,7 @@ setup:
 		require.NoError(t, err)
 		assert.NotNil(t, r)
 
-		_, statErr := fs.Stat(repoDir + "/.seil/logs")
+		_, statErr := fs.Stat(filepath.Join(repoDir, ".seil", "logs"))
 		assert.NoError(t, statErr, "log directory should be created")
 	})
 
@@ -72,7 +72,7 @@ setup:
 		require.NoError(t, err)
 		require.Len(t, results, 1)
 		assert.Equal(t, run.StatusSuccess, results[0].Status)
-		assert.Contains(t, results[0].LogFile, repoDir+"/.seil/logs/setup-greet-")
+		assert.Contains(t, results[0].LogFile, filepath.Join(repoDir, ".seil", "logs", "setup-greet-"))
 	})
 
 	t.Run("temp dir used when log_dir is not set", func(t *testing.T) {

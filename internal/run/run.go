@@ -2,19 +2,23 @@ package run
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os/exec"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/spf13/afero"
 
 	"github.com/sushichan044/seil/internal/config"
 )
 
-const logDirPerm = 0700
+const (
+	logDirPerm    = 0700
+	randSuffixLen = 8
+)
 
 func Prepare(fs afero.Fs, cfg *config.ResolvedConfig) (*JobRunner, error) {
 	if cfg.RootDir() == "" {
@@ -36,7 +40,7 @@ func Prepare(fs afero.Fs, cfg *config.ResolvedConfig) (*JobRunner, error) {
 			return nil, err
 		}
 	}
-	return &JobRunner{fs, cfg, logRoot, customDir}, nil
+	return &JobRunner{fs: fs, cfg: cfg, logRoot: logRoot, customDir: customDir}, nil
 }
 
 type JobRunner struct {
@@ -49,7 +53,11 @@ type JobRunner struct {
 func (r *JobRunner) logFileForJob(hookType string, job *config.Job) (afero.File, error) {
 	var filename string
 	if r.customDir {
-		filename = fmt.Sprintf("%s-%s-%d.log", hookType, job.PathSafeName(), time.Now().UnixNano())
+		b := make([]byte, randSuffixLen)
+		if _, err := rand.Read(b); err != nil {
+			return nil, fmt.Errorf("failed to generate log filename: %w", err)
+		}
+		filename = fmt.Sprintf("%s-%s-%s.log", hookType, job.PathSafeName(), hex.EncodeToString(b))
 	} else {
 		filename = hookType + "-" + job.PathSafeName() + ".log"
 	}
