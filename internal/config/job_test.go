@@ -1,6 +1,8 @@
 package config_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -53,34 +55,49 @@ func TestJob_PathSafeName(t *testing.T) {
 	})
 }
 
+func mustWriteFileInJob(t *testing.T, path string) {
+	t.Helper()
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+	require.NoError(t, os.WriteFile(path, nil, 0o644))
+}
+
 func TestGlobJob_Matches(t *testing.T) {
 	t.Run("returns true when glob is empty (always run)", func(t *testing.T) {
+		root := t.TempDir()
+		mustWriteFileInJob(t, filepath.Join(root, "main.go"))
 		job := config.GlobJob{Glob: ""}
-		p, err := config.NewWorkspacePath("/project", "main.go")
+		p, err := config.NewWorkspacePath(root, filepath.Join(root, "main.go"))
 		require.NoError(t, err)
 		assert.True(t, job.Matches(p))
 	})
 
 	t.Run("returns true when file matches glob pattern", func(t *testing.T) {
+		root := t.TempDir()
+		mustWriteFileInJob(t, filepath.Join(root, "main.go"))
 		job := config.GlobJob{Glob: "**/*.go"}
-		p, err := config.NewWorkspacePath("/project", "/project/main.go")
+		p, err := config.NewWorkspacePath(root, filepath.Join(root, "main.go"))
 		require.NoError(t, err)
 		assert.True(t, job.Matches(p))
 	})
 
 	t.Run("returns false when file does not match glob pattern", func(t *testing.T) {
+		root := t.TempDir()
+		mustWriteFileInJob(t, filepath.Join(root, "main.go"))
 		job := config.GlobJob{Glob: "**/*.ts"}
-		p, err := config.NewWorkspacePath("/project", "/project/main.go")
+		p, err := config.NewWorkspacePath(root, filepath.Join(root, "main.go"))
 		require.NoError(t, err)
 		assert.False(t, job.Matches(p))
 	})
 
 	t.Run("matches relative to configRoot", func(t *testing.T) {
+		root := t.TempDir()
+		mustWriteFileInJob(t, filepath.Join(root, "src", "foo", "bar.go"))
+		mustWriteFileInJob(t, filepath.Join(root, "main.go"))
 		job := config.GlobJob{Glob: "src/**/*.go"}
-		p1, err := config.NewWorkspacePath("/project", "/project/src/foo/bar.go")
+		p1, err := config.NewWorkspacePath(root, filepath.Join(root, "src", "foo", "bar.go"))
 		require.NoError(t, err)
 		assert.True(t, job.Matches(p1))
-		p2, err := config.NewWorkspacePath("/project", "/project/main.go")
+		p2, err := config.NewWorkspacePath(root, filepath.Join(root, "main.go"))
 		require.NoError(t, err)
 		assert.False(t, job.Matches(p2))
 	})
