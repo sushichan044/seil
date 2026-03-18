@@ -2,6 +2,7 @@ package seil
 
 import (
 	"context"
+	"errors"
 
 	"github.com/spf13/afero"
 
@@ -33,6 +34,17 @@ func (w *Workspace) RunPostEditHooks(ctx context.Context, filePath string) ([]ru
 	}
 	wsPath, err := config.NewWorkspacePath(w.config.RootDir(), filePath)
 	if err != nil {
+		if outsideErr, ok := errors.AsType[*config.OutsideWorkspaceError](err); ok {
+			jobs := w.config.Config.PostEdit.Jobs
+			results := make([]run.Result, len(jobs))
+			for i, job := range jobs {
+				results[i] = run.Skipped(job.DisplayName(), run.SkipReason{
+					Code:    run.SkipReasonOutsideWorkspace,
+					Message: outsideErr.Error(),
+				})
+			}
+			return results, nil
+		}
 		return nil, err
 	}
 	return runPostEditHooks(ctx, w.config, m, w.fs, wsPath)
