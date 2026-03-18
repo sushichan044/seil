@@ -12,6 +12,9 @@ const (
 	gitShortHashLength = 7
 )
 
+// version can be set at build time via ldflags: -X github.com/sushichan044/seil/internal/version.version=vX.Y.Z.
+var version string
+
 // Get returns the version information of the application.
 // It reads version from [runtime/debug.ReadBuildInfo]() which is automatically
 // populated when built with Go modules and version tags.
@@ -23,21 +26,30 @@ const (
 //   - "vX.Y.Z (rev: abc1234, modified)" when built with uncommitted changes
 func Get() string {
 	info, ok := debug.ReadBuildInfo()
+
+	v := version
+	if v == "" {
+		if !ok {
+			return "unknown"
+		}
+		v = info.Main.Version
+		if v == "" || v == "(devel)" {
+			v = "dev"
+		}
+	}
+
 	if !ok {
-		return "unknown"
+		return v
 	}
 
-	version := info.Main.Version
-	if version == "" || version == "(devel)" {
-		version = "dev"
-	}
+	return formatWithVCS(v, info.Settings)
+}
 
-	// Extract VCS information from build settings
+func formatWithVCS(v string, settings []debug.BuildSetting) string {
 	var revision string
 	var modified bool
-	var dirty string
 
-	for _, setting := range info.Settings {
+	for _, setting := range settings {
 		switch setting.Key {
 		case "vcs.revision":
 			revision = setting.Value
@@ -46,19 +58,18 @@ func Get() string {
 		}
 	}
 
-	// Format revision info
-	if revision != "" {
-		// Shorten revision to first gitShortHashLength characters (git short hash style)
-		if len(revision) > gitShortHashLength {
-			revision = revision[:gitShortHashLength]
-		}
-
-		if modified {
-			dirty = ", modified"
-		}
-
-		return fmt.Sprintf("%s (rev: %s%s)", version, revision, dirty)
+	if revision == "" {
+		return v
 	}
 
-	return version
+	if len(revision) > gitShortHashLength {
+		revision = revision[:gitShortHashLength]
+	}
+
+	dirty := ""
+	if modified {
+		dirty = ", modified"
+	}
+
+	return fmt.Sprintf("%s (rev: %s%s)", v, revision, dirty)
 }
