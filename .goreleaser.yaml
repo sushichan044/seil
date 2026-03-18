@@ -18,6 +18,7 @@ builds:
       - darwin
     ldflags:
       - -s -w
+      - -X github.com/sushichan044/seil/internal/version.version=v{{.Version}}
 
 archives:
   - formats: [tar.gz]
