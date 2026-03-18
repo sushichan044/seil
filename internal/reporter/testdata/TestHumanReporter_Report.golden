@@ -15,6 +15,7 @@ log: /tmp/ok.log
 hook: skip
 status: skipped
 log: 
+skip_reason: glob pattern "**/*.ts" did not match [glob_no_match]
 
 ---
 1 succeeded, 1 failed, 1 skipped

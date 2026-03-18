@@ -57,12 +57,18 @@ func TestJSONReporter_Report(t *testing.T) {
 	err = json.Unmarshal([]byte(stdout.String()), &grouped)
 	require.NoError(t, err)
 	require.Len(t, grouped.Failure, 1)
+	require.Len(t, grouped.Skipped, 1)
+	require.NotNil(t, grouped.Skipped[0].SkipReason)
+	assert.Equal(t, run.SkipReasonGlobNoMatch, grouped.Skipped[0].SkipReason.Code)
 }
 
 func sampleResults() []run.Result {
 	return []run.Result{
 		run.Success("ok", "/tmp/ok.log"),
 		run.Failure("fail", "/tmp/fail.log", errors.New("exit status 1")),
-		run.Skipped("skip"),
+		run.Skipped("skip", run.SkipReason{
+			Code:    run.SkipReasonGlobNoMatch,
+			Message: `glob pattern "**/*.ts" did not match`,
+		}),
 	}
 }

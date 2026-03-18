@@ -161,6 +161,13 @@ func groupResults(results []run.Result) groupedResults {
 func writeResult(w io.Writer, result run.Result) error {
 	_, err := fmt.Fprintf(w, "\nhook: %s\nstatus: %s\nlog: %s\n",
 		result.Name, result.Status, result.LogFile)
+	if err != nil {
+		return err
+	}
+	if result.SkipReason != nil {
+		_, err = fmt.Fprintf(w, "skip_reason: %s [%s]\n",
+			result.SkipReason.Message, result.SkipReason.Code)
+	}
 	return err
 }
 

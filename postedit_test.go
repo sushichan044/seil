@@ -41,6 +41,8 @@ post_edit:
 		require.NoError(t, err)
 		require.Len(t, results, 1)
 		assert.Equal(t, run.StatusSkipped, results[0].Status)
+		require.NotNil(t, results[0].SkipReason)
+		assert.Equal(t, run.SkipReasonGlobNoMatch, results[0].SkipReason.Code)
 	})
 
 	t.Run("skips hook when file is gitignored", func(t *testing.T) {
@@ -60,6 +62,8 @@ post_edit:
 		require.NoError(t, err)
 		require.Len(t, results, 1)
 		assert.Equal(t, run.StatusSkipped, results[0].Status)
+		require.NotNil(t, results[0].SkipReason)
+		assert.Equal(t, run.SkipReasonGitignored, results[0].SkipReason.Code)
 	})
 
 	t.Run("executes hook and returns success on exit code 0", func(t *testing.T) {
@@ -158,6 +162,8 @@ post_edit:
 		require.NoError(t, err)
 		require.Len(t, results, 1)
 		assert.Equal(t, run.StatusSkipped, results[0].Status)
+		require.NotNil(t, results[0].SkipReason)
+		assert.Equal(t, run.SkipReasonGitignored, results[0].SkipReason.Code)
 	})
 
 	t.Run("template variables are expanded in command", func(t *testing.T) {

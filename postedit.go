@@ -2,6 +2,7 @@ package seil
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/spf13/afero"
 
@@ -23,8 +24,18 @@ func runPostEditHooks(
 	var toRunIdx []int
 
 	for i, job := range jobs {
-		if !job.Matches(wsPath) || gitignoreMatcher.IsIgnored(wsPath.Rel()) {
-			results[i] = run.Skipped(job.DisplayName())
+		if !job.Matches(wsPath) {
+			results[i] = run.Skipped(job.DisplayName(), run.SkipReason{
+				Code:    run.SkipReasonGlobNoMatch,
+				Message: fmt.Sprintf("glob pattern %q did not match", job.Glob),
+			})
+			continue
+		}
+		if gitignoreMatcher != nil && gitignoreMatcher.IsIgnored(wsPath.Rel()) {
+			results[i] = run.Skipped(job.DisplayName(), run.SkipReason{
+				Code:    run.SkipReasonGitignored,
+				Message: fmt.Sprintf("file %q is gitignored", wsPath.Rel()),
+			})
 			continue
 		}
 		toRun = append(toRun, job)
