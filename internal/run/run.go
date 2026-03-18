@@ -48,21 +48,53 @@ func Prepare(fs afero.Fs, cfg *config.ResolvedConfig) (*JobRunner, error) {
 }
 
 func prepareCustomLogDir(fs afero.Fs, dir, rootDir string) (string, error) {
+	if _, ok := fs.(afero.LinkReader); ok {
+		if err := checkSymlinkEscape(fs, dir, rootDir); err != nil {
+			return "", err
+		}
+	}
 	if err := fs.MkdirAll(dir, logDirPerm); err != nil {
 		return "", fmt.Errorf("failed to create log directory: %w", err)
 	}
-	resolved, err := filepath.EvalSymlinks(dir)
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve log directory: %w", err)
+	if _, ok := fs.(afero.LinkReader); ok {
+		resolved, err := filepath.EvalSymlinks(dir)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve log directory: %w", err)
+		}
+		return resolved, nil
 	}
+	return dir, nil
+}
+
+func checkSymlinkEscape(fs afero.Fs, dir, rootDir string) error {
 	resolvedRoot, err := filepath.EvalSymlinks(rootDir)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve config root: %w", err)
+		return fmt.Errorf("failed to resolve config root: %w", err)
 	}
-	if resolved != resolvedRoot && !strings.HasPrefix(resolved, resolvedRoot+string(filepath.Separator)) {
-		return "", errors.New("log_dir resolves outside config root via symlink")
+	ancestor := dir
+	for {
+		if _, statErr := fs.Stat(ancestor); statErr == nil {
+			break
+		}
+		parent := filepath.Dir(ancestor)
+		if parent == ancestor {
+			break // reached fs root
+		}
+		ancestor = parent
 	}
-	return resolved, nil
+	resolvedAncestor, err := filepath.EvalSymlinks(ancestor)
+	if err != nil {
+		return fmt.Errorf("failed to resolve log directory ancestor: %w", err)
+	}
+	rel, err := filepath.Rel(ancestor, dir)
+	if err != nil {
+		return fmt.Errorf("failed to compute relative path: %w", err)
+	}
+	resolvedTarget := filepath.Join(resolvedAncestor, rel)
+	if resolvedTarget != resolvedRoot && !strings.HasPrefix(resolvedTarget, resolvedRoot+string(filepath.Separator)) {
+		return errors.New("log_dir resolves outside config root via symlink")
+	}
+	return nil
 }
 
 type JobRunner struct {
