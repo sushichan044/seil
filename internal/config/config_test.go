@@ -20,6 +20,12 @@ func TestParseConfigYAML(t *testing.T) {
 		assert.Empty(t, cfg.PostEdit.Jobs)
 	})
 
+	t.Run("valid default config", func(t *testing.T) {
+		cfg, err := config.GetDefault()
+		require.NoError(t, err)
+		assert.NotNil(t, cfg)
+	})
+
 	t.Run("valid config with all hooks", func(t *testing.T) {
 		data := []byte(`
 setup:

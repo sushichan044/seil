@@ -24,6 +24,7 @@ type (
 		Version  kong.VersionFlag `short:"v"`
 		Reporter reporter.Name    `                               help:"Reporter to use for output. Possible values: ${reporter_names}"                     default:"auto" enum:"${reporter_names}"`
 
+		Init     InitCmd     `cmd:"" help:"Initialize a new configuration file in the current directory."`
 		PostEdit PostEditCmd `cmd:"" help:"Run post-edit hooks for a file."`
 		Setup    SetupCmd    `cmd:"" help:"Run setup hooks."`
 		Teardown TeardownCmd `cmd:"" help:"Run teardown hooks."`
@@ -58,6 +59,22 @@ func (cli *CLI) AfterApply(r *resolvedConfig) error {
 	}
 
 	*r = *cfg
+	return nil
+}
+
+type InitCmd struct{}
+
+func (c *InitCmd) Run(cfg *resolvedConfig) error {
+	if exists, err := cfg.FileExists(); err != nil {
+		return fmt.Errorf("failed to check if config file exists: %w", err)
+	} else if exists {
+		return fmt.Errorf("config file already exists at %s", cfg.ConfigPath())
+	}
+
+	if err := config.SaveDefault(afero.NewOsFs(), cfg.ConfigPath()); err != nil {
+		return fmt.Errorf("failed to save config file: %w", err)
+	}
+
 	return nil
 }
 

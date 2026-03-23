@@ -363,6 +363,7 @@ linters:
         - os.Mkdir.*
         - os.OpenFile
         - os.WriteFile
+        - afero.WriteFile
         - prometheus.ExponentialBuckets.*
         - prometheus.LinearBuckets
 

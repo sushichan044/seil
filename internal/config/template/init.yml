@@ -1,0 +1,17 @@
+setup:
+  jobs:
+    - name: "Install dependencies"
+      run: "echo 'Installing dependencies...'"
+
+post_edit:
+  jobs:
+    - name: "Run formatter and linter"
+      run: "echo 'Running formatter and linter for {{.File}}...'"
+
+    - name: Run tests
+      run: "echo 'Running tests for {{.File}}...'"
+
+teardown:
+  jobs:
+    - name: "Clean up resources"
+      run: "echo 'Cleaning up resources...'"

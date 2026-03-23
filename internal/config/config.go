@@ -1,17 +1,23 @@
 package config
 
 import (
+	"os"
 	"path/filepath"
+
+	_ "embed"
 
 	z "github.com/Oudwins/zog"
 	"github.com/goccy/go-yaml"
 )
 
+//go:embed template/init.yml
+var defaultConfigYml []byte
+
 type Config struct {
-	LogDir   string       `yaml:"log_dir"`
-	PostEdit PostEditHook `yaml:"post_edit"`
-	Setup    SetupHook    `yaml:"setup"`
-	Teardown TeardownHook `yaml:"teardown"`
+	LogDir   string       `yaml:"log_dir,omitempty"`
+	PostEdit PostEditHook `yaml:"post_edit,omitempty"`
+	Setup    SetupHook    `yaml:"setup,omitempty"`
+	Teardown TeardownHook `yaml:"teardown,omitempty"`
 }
 
 //nolint:gochecknoglobals // zog schema initialized at package level
@@ -42,6 +48,17 @@ func NewEmpty(rootDir string) *ResolvedConfig {
 	}
 }
 
+func (r *ResolvedConfig) FileExists() (bool, error) {
+	if _, err := os.Stat(r.ConfigPath()); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}
+
 func (r *ResolvedConfig) RootDir() string {
 	return r.rootDir
 }
@@ -60,6 +77,10 @@ func (r *ResolvedConfig) LogDir() string {
 		return ""
 	}
 	return filepath.Join(r.rootDir, r.Config.LogDir)
+}
+
+func GetDefault() (*Config, error) {
+	return ParseConfigYAML(defaultConfigYml)
 }
 
 // ParseConfigYAML parses bytes and returns a validated Config.
