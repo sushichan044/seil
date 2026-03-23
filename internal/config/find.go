@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -11,7 +12,10 @@ import (
 var ErrConfigNotFound = errors.New("config file not found")
 
 func FindConfigFile(fs afero.Fs, fromPath string) (string, error) {
-	startDir := filepath.Clean(fromPath)
+	startDir, err := filepath.Abs(fromPath)
+	if err != nil {
+		return "", err
+	}
 
 	info, err := fs.Stat(startDir)
 	switch {
@@ -23,18 +27,30 @@ func FindConfigFile(fs afero.Fs, fromPath string) (string, error) {
 		return "", err
 	}
 
-	for dir := startDir; ; dir = filepath.Dir(dir) {
-		configPath := filepath.Join(dir, defaultConfigFileName)
-		if _, statErr := fs.Stat(configPath); statErr == nil {
-			return configPath, nil
+	for {
+		configPath := filepath.Join(startDir, defaultConfigFileName)
+		fi, statErr := fs.Stat(configPath)
+		if statErr == nil {
+			mode := fi.Mode()
+			if mode.IsRegular() {
+				return configPath, nil
+			}
+
+			return "", fmt.Errorf(
+				"found config at %s but it is not a regular file (mode: %s)",
+				configPath,
+				mode.String(),
+			)
 		} else if !os.IsNotExist(statErr) {
 			return "", statErr
 		}
 
-		parent := filepath.Dir(dir)
-		// Now we are at the root. Stop searching.
-		if parent == dir {
+		parent := filepath.Dir(startDir)
+		// now we are at the root of the filesystem, stop searching
+		if parent == startDir {
 			return "", ErrConfigNotFound
 		}
+
+		startDir = parent
 	}
 }
