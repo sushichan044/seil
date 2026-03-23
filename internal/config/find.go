@@ -28,16 +28,17 @@ func FindConfigFile(fs afero.Fs, fromPath string) (string, error) {
 	}
 
 	for {
-		fi, statErr := fs.Stat(filepath.Join(startDir, defaultConfigFileName))
+		configPath := filepath.Join(startDir, defaultConfigFileName)
+		fi, statErr := fs.Stat(configPath)
 		if statErr == nil {
 			mode := fi.Mode()
 			if mode.IsRegular() {
-				return filepath.Join(startDir, defaultConfigFileName), nil
+				return configPath, nil
 			}
 
 			return "", fmt.Errorf(
 				"found config at %s but it is not a regular file (mode: %s)",
-				filepath.Join(startDir, defaultConfigFileName),
+				configPath,
 				mode.String(),
 			)
 		} else if !os.IsNotExist(statErr) {
