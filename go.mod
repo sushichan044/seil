@@ -3,7 +3,7 @@ module github.com/sushichan044/seil
 go 1.26.0
 
 require (
-	github.com/Oudwins/zog v0.22.1-0.20260207152405-f27b872631d1
+	github.com/Oudwins/zog v0.22.1
 	github.com/alecthomas/kong v1.14.0
 	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/charmbracelet/x/exp/golden v0.0.0-20240806155701-69247e0abc2a
