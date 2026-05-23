@@ -5,8 +5,7 @@
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
       "draft": true,
-      "force-tag": true,
-      "prerelease": false,
+      "force-tag-creation": true,
       "skip-changelog": true
     }
   },
